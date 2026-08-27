@@ -233,9 +233,10 @@ namespace Revit.IFC.Export.Exporter
             IFCFileDocumentInfo ifcFileDocumentInfo = new IFCFileDocumentInfo(document);
             WriteIFCFile(m_IfcFile, ifcFileDocumentInfo);
          }
-         catch
+         catch (System.Exception ex)
          {
             // As of Revit 2022.1, there are no EDM errors to report, because we use ODA.
+            document.Application.WriteJournalComment("ezBimOne IFC export failed: " + ex, true);
             FailureMessage fm = new FailureMessage(BuiltInFailures.ExportFailures.IFCFatalExportError);
             document.PostFailure(fm);
          }
