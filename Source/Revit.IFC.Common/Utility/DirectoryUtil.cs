@@ -41,15 +41,15 @@ namespace Revit.IFC.Common.Utility
       {
          get
          {
+            string revitIfc = Path.Combine(RevitProgramPath, "IFC");
 #if IFC_OPENSOURCE
-            // For the open source code, search it from the IfcExporter install folder
-            string schemaLoc = Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location);
-            if (!string.IsNullOrEmpty(schemaLoc))
-            {
+            // Next to our DLL if XSDs were copied; otherwise Revit's IFC folder
+            // (Autodesk add-in keeps schemas beside Revit.IFC.Export.dll).
+            string schemaLoc = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (!string.IsNullOrEmpty(schemaLoc) && File.Exists(Path.Combine(schemaLoc, "IFC4.xsd")))
                return schemaLoc;
-            }
 #endif
-            return Path.Combine(RevitProgramPath, "IFC");
+            return revitIfc;
          }
       }
    }
