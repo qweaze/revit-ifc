@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC library: this library works with Autodesk(R) Revit(R) to export IFC files containing model geometry.
 // Copyright (C) 2012  Autodesk, Inc.
 // 
@@ -173,6 +173,7 @@ namespace Revit.IFC.Export.Exporter
          {
             // This doesn't always work, because we don't always reach the maximum size in the same way.
             // The default message is better than no message as a backup.
+            document.Application.WriteJournalComment("ezBimOne IFC export failed: " + ex, true);
             FailureDefinitionId ifcError =
                (ex.Message == "IFC: EDM Toolkit Error: Max model data size is reached.") ?
                BuiltInFailures.ExportFailures.IFCFatalToolkitExportError :
