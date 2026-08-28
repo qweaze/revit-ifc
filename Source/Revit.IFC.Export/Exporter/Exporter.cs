@@ -143,12 +143,14 @@ namespace Revit.IFC.Export.Exporter
 
       private void ExportHostDocument(ExporterIFC exporterIFC, Document document, View filterView)
       {
-         BeginExport(exporterIFC, filterView);
-         BeginHostDocumentExport(exporterIFC, document);
+          BeginExport(exporterIFC, filterView);
+          BeginHostDocumentExport(exporterIFC, document);
 
-         m_ElementExporter?.Invoke(exporterIFC, document);
+          m_ElementExporter?.Invoke(exporterIFC, document);
+          IncrementalExportCache.SweepDeleted(exporterIFC);
+          IncrementalExportCache.WriteJournalSummary(document);
 
-         EndHostDocumentExport(exporterIFC, document);
+          EndHostDocumentExport(exporterIFC, document);
       }
 
       private void ExportLinkedDocument(ExporterIFC exporterIFC, ElementId linkId, Document document,
@@ -229,6 +231,7 @@ namespace Revit.IFC.Export.Exporter
 
             IFCFileDocumentInfo ifcFileDocumentInfo = new IFCFileDocumentInfo(document);
             WriteIFCFile(m_IfcFile, ifcFileDocumentInfo);
+            IncrementalExportCache.SaveSidecar();
          }
          catch (System.Exception ex)
          {
@@ -241,6 +244,7 @@ namespace Revit.IFC.Export.Exporter
          {
             ExporterCacheManager.Clear(true);
             ExporterStateManager.Clear();
+            IncrementalExportCache.Reset();
 
             DelegateClear();
             IFCAnyHandleUtil.EventClear();
@@ -708,8 +712,16 @@ namespace Revit.IFC.Export.Exporter
          {
             using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, true))
             {
-               ExportElementImpl(exporterIFC, element, productWrapper);
-               ExporterUtil.ExportRelatedProperties(exporterIFC, element, productWrapper);
+               if (IncrementalExportCache.TrySkipUnchanged(exporterIFC, element, productWrapper))
+               {
+               }
+               else
+               {
+                  IncrementalExportCache.PrepareChanged(exporterIFC, element);
+                  ExportElementImpl(exporterIFC, element, productWrapper);
+                  ExporterUtil.ExportRelatedProperties(exporterIFC, element, productWrapper);
+               }
+               IncrementalExportCache.Record(element);
             }
 
             // We are going to clear the parameter cache for the element (not the type) after the export.
@@ -1132,11 +1144,12 @@ namespace Revit.IFC.Export.Exporter
          ExportOptionsCache exportOptionsCache = ExportOptionsCache.Create(exporterIFC, filterView);
          ExporterCacheManager.ExportOptionsCache = exportOptionsCache;
 
-         IFCFileModelOptions modelOptions = CreateIFCFileModelOptions(exporterIFC);
+          IFCFileModelOptions modelOptions = CreateIFCFileModelOptions(exporterIFC);
 
-         m_IfcFile = IFCFile.Create(modelOptions);
-         exporterIFC.SetFile(m_IfcFile);
-      }
+          m_IfcFile = IFCFile.Create(modelOptions);
+          exporterIFC.SetFile(m_IfcFile);
+          IncrementalExportCache.SetModelOptions(modelOptions);
+       }
 
       private bool ExportBuilding(IList<Level> allLevels)
       {
@@ -1172,21 +1185,28 @@ namespace Revit.IFC.Export.Exporter
             langType = app.Language;
          ExporterCacheManager.LanguageType = langType;
 
-         IFCFile file = exporterIFC.GetFile();
-         IFCAnyHandle applicationHandle = CreateApplicationInformation(file, document);
+          m_IfcFile = IncrementalExportCache.TryActivate(exporterIFC, document, m_IfcFile);
 
-         CreateGlobalCartesianOrigin(exporterIFC);
-         CreateGlobalDirection(exporterIFC);
-         CreateGlobalDirection2D(exporterIFC);
+          IFCFile file = exporterIFC.GetFile();
+          CreateGlobalCartesianOrigin(exporterIFC);
+          CreateGlobalDirection(exporterIFC);
+          CreateGlobalDirection2D(exporterIFC);
 
-         // Initialize common properties before creating any rooted entities.
-         InitializePropertySets();
-         InitializeQuantities(ExporterCacheManager.ExportOptionsCache.FileVersion);
+          // Initialize common properties before creating any rooted entities.
+          InitializePropertySets();
+          InitializeQuantities(ExporterCacheManager.ExportOptionsCache.FileVersion);
 
-         CreateProject(exporterIFC, document, applicationHandle);
-
-         BeginDocumentExportCommon(exporterIFC, document);
-      }
+          if (IncrementalExportCache.Active)
+          {
+             document.Application.WriteJournalComment("ezBimOne IFC incremental: reuse previous IFCFile", true);
+          }
+          else
+          {
+             IFCAnyHandle applicationHandle = CreateApplicationInformation(file, document);
+             CreateProject(exporterIFC, document, applicationHandle);
+             BeginDocumentExportCommon(exporterIFC, document);
+          }
+       }
 
       /// <summary>
       /// Initializes the common properties at the beginning of the export process.
