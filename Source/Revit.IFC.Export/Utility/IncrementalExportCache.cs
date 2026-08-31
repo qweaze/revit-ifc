@@ -269,6 +269,9 @@ namespace Revit.IFC.Export.Utility
          IFCAnyHandle project = projects[0];
          ExporterCacheManager.ProjectHandle = project;
 
+         if (!RestoreUnitsInContext(file, project))
+            return false;
+
          IFCAnyHandle ownerHistory = IFCAnyHandleUtil.GetInstanceAttribute(project, "OwnerHistory");
          if (IFCAnyHandleUtil.IsNullOrHasNoValue(ownerHistory))
             return false;
@@ -287,6 +290,22 @@ namespace Revit.IFC.Export.Utility
             return false;
 
          RestoreLevels(exporterIFC, document);
+         return true;
+      }
+
+      static bool RestoreUnitsInContext(IFCFile file, IFCAnyHandle project)
+      {
+         IFCAnyHandle units = IFCAnyHandleUtil.GetInstanceAttribute(project, "UnitsInContext");
+         if (!IFCAnyHandleUtil.IsNullOrHasNoValue(units) &&
+             IFCAnyHandleUtil.IsSubTypeOf(units, IFCEntityType.IfcUnitAssignment))
+            return true;
+
+         IList<IFCAnyHandle> assignments = file.GetInstances(IFCEntityType.IfcUnitAssignment.ToString(), false);
+         if (assignments == null || assignments.Count == 0 ||
+             IFCAnyHandleUtil.IsNullOrHasNoValue(assignments[0]))
+            return false;
+
+         IFCAnyHandleUtil.SetAttribute(project, "UnitsInContext", assignments[0]);
          return true;
       }
 
