@@ -2283,9 +2283,14 @@ namespace Revit.IFC.Export.Exporter
             if (ExporterCacheManager.ExportOptionsCache.PropertySetOptions.ExportMaterialPsets)
                MaterialPropertiesUtil.ExportMaterialProperties(file, exporterIFC);
 
-            // Create unit assignement
-            IFCAnyHandle units = IFCInstanceExporter.CreateUnitAssignment(file, UnitMappingUtil.GetUnitsToAssign());
-            ExporterCacheManager.ProjectHandle.SetAttribute("UnitsInContext", units);
+            // Create unit assignment. Incremental reuse already has IfcUnitAssignment from the
+            // loaded file; rewriting UnitsInContext with an empty UnitsCache collides with an
+            // existing STEP id (e.g. IfcCartesianPoint) and breaks IFC readers.
+            if (!IncrementalExportCache.Active)
+            {
+               IFCAnyHandle units = IFCInstanceExporter.CreateUnitAssignment(file, UnitMappingUtil.GetUnitsToAssign());
+               ExporterCacheManager.ProjectHandle.SetAttribute("UnitsInContext", units);
+            }
 
             // Allow native code to remove some unused handles and clear internal caches.
             ExporterIFCUtils.EndExportInternal(exporterIFC);
