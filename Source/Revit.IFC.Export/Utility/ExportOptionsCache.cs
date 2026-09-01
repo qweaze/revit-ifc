@@ -434,8 +434,24 @@ namespace Revit.IFC.Export.Utility
 
          cache.SelectedParametermappingTableName = OptionsUtil.GetNamedStringOption(options, "ExportUserDefinedParameterMappingFileName");
 
-         bool? bExportLinks = OptionsUtil.GetNamedBooleanOption(options, "ExportingLinks");
-         cache.ExportingLink = (bExportLinks.HasValue && bExportLinks.Value == true);
+         string federatedInfoString = OptionsUtil.GetNamedStringOption(options, "FederatedLinkInfo");
+         cache.FederatedLinkInfo = ParseFederatedLinkInfo(federatedInfoString);
+
+         string exportLinkedFileAsString = OptionsUtil.GetNamedStringOption(options, "ExportingLinks");
+         if (!string.IsNullOrWhiteSpace(exportLinkedFileAsString))
+         {
+            if (Enum.TryParse(exportLinkedFileAsString, out LinkedFileExportAs linkedFileExportAs))
+               cache.ExportLinkedFileAs = linkedFileExportAs;
+            else
+            {
+               bool? bExportLinks = OptionsUtil.GetNamedBooleanOption(options, "ExportingLinks");
+               if (bExportLinks == true)
+                  cache.ExportLinkedFileAs = LinkedFileExportAs.ExportAsSeparate;
+            }
+         }
+
+         if (cache.ExportLinkedFileAs == LinkedFileExportAs.ExportAsSeparate)
+            cache.ExportingLink = true;
 
          if (cache.ExportingLink)
          {

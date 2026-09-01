@@ -335,8 +335,12 @@ namespace Revit.IFC.Export.Utility
          NeedToGenerateIFCObjects = false;
          IFCAnyHandle materialLayerSet = null;
 
-         if (ProductWrapper != null && !ProductWrapper.ToNative().IsValidObject)
-            ProductWrapper = null;
+         if (ProductWrapper != null)
+         {
+            IFCProductWrapper native = ProductWrapper.ToNative();
+            if (native == null || !native.IsValidObject)
+               ProductWrapper = null;
+         }
 
          ProductWrapper?.ClearFinishMaterials();
 
@@ -391,7 +395,9 @@ namespace Revit.IFC.Export.Utility
          }
 
          IFCFile file = ExporterIFC.GetFile();
-         Document document = ExporterCacheManager.Document;
+         Document document = Element?.Document ?? ExporterCacheManager.Document;
+         if (document == null)
+            return;
 
          IList<IFCAnyHandle> layers = new List<IFCAnyHandle>(numLayersToCreate);
          IList<Tuple<string, IFCAnyHandle>> layerWidthQuantities = new List<Tuple<string, IFCAnyHandle>>();
@@ -411,7 +417,7 @@ namespace Revit.IFC.Export.Utility
             IFCLogical? isVentilated = null;
             int isVentilatedValue;
 
-            Material material = document.GetElement(MaterialIds[ii].BaseMatId) as Material;
+            Material material = document.GetElement(MaterialIds[widthIndex].BaseMatId) as Material;
             if (material != null)
             {
                if (ParameterUtil.GetIntValueFromElement(material, "IfcMaterialLayer.IsVentilated", out isVentilatedValue) != null)
@@ -424,7 +430,7 @@ namespace Revit.IFC.Export.Utility
 
                if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
                {
-                  layerName = MaterialIds[ii].ShapeAspectName;
+                  layerName = MaterialIds[widthIndex].ShapeAspectName;
                   if (string.IsNullOrEmpty(layerName))
                      layerName = "Layer";
 
@@ -464,7 +470,7 @@ namespace Revit.IFC.Export.Utility
          if (layers.Count > 0)
          {
             ElementType type = document.GetElement(typeElemId) as ElementType;
-            string layerSetBaseName = type.FamilyName + ":" + type.Name;
+            string layerSetBaseName = type != null ? type.FamilyName + ":" + type.Name : "LayerSet";
             string layerSetName = NamingUtil.GetOverrideStringValue(type, "IfcMaterialLayerSet.Name", layerSetBaseName);
             string layerSetDesc = NamingUtil.GetOverrideStringValue(type, "IfcMaterialLayerSet.Description", null);
 

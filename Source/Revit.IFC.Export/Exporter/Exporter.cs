@@ -156,18 +156,62 @@ namespace Revit.IFC.Export.Exporter
       private void ExportLinkedDocument(ExporterIFC exporterIFC, ElementId linkId, Document document,
          string guid, Transform linkTrf)
       {
+         ExportOptionsCache options = ExporterCacheManager.ExportOptionsCache;
+         View hostFilterView = options.FilterViewForExport;
+         View3D linkFilterView = FindSameNamedView3D(document, hostFilterView);
+         options.FilterViewForExport = linkFilterView;
+         ElementFilteringUtil.InitCategoryVisibilityCache();
+
+         string linkTitle = string.IsNullOrEmpty(document.Title) ? document.PathName : document.Title;
+         if (linkFilterView != null)
+         {
+            document.Application.WriteJournalComment(
+               "ezBimOne IFC link: " + linkTitle + " filter view '" + linkFilterView.Name + "'", true);
+         }
+         else
+         {
+            string hostName = hostFilterView != null ? hostFilterView.Name : string.Empty;
+            document.Application.WriteJournalComment(
+               "ezBimOne IFC link: " + linkTitle + " no view '" + hostName + "', exporting all elements", true);
+         }
+
          Transaction transaction = new Transaction(document, "Export IFC Link");
-         transaction.Start();
-         FailureHandlingOptions failureOptions = transaction.GetFailureHandlingOptions();
-         failureOptions.SetClearAfterRollback(false);
-         transaction.SetFailureHandlingOptions(failureOptions);
+         try
+         {
+            transaction.Start();
+            FailureHandlingOptions failureOptions = transaction.GetFailureHandlingOptions();
+            failureOptions.SetClearAfterRollback(false);
+            transaction.SetFailureHandlingOptions(failureOptions);
 
-         ExporterStateManager.CurrentLinkId = linkId;
-         BeginLinkedDocumentExport(exporterIFC, document, guid);
-         m_ElementExporter?.Invoke(exporterIFC, document);
-         EndLinkedDocumentExport(exporterIFC, document, linkTrf);
+            ExporterStateManager.CurrentLinkId = linkId;
+            BeginLinkedDocumentExport(exporterIFC, document, guid);
+            m_ElementExporter?.Invoke(exporterIFC, document);
+            EndLinkedDocumentExport(exporterIFC, document, linkTrf);
+         }
+         finally
+         {
+            if (transaction.GetStatus() == TransactionStatus.Started)
+               transaction.RollBack();
+            options.FilterViewForExport = hostFilterView;
+            ElementFilteringUtil.InitCategoryVisibilityCache();
+         }
+      }
 
-         transaction.RollBack();
+      /// <summary>
+      /// R23 federated links cannot use the host view collector. A 3D view in the link with the
+      /// same name as the host export view is the per-element visibility filter.
+      /// </summary>
+      private static View3D FindSameNamedView3D(Document document, View hostView)
+      {
+         if (hostView == null || string.IsNullOrEmpty(hostView.Name))
+            return null;
+
+         string name = hostView.Name;
+         return new FilteredElementCollector(document)
+            .OfClass(typeof(View3D))
+            .Cast<View3D>()
+            .FirstOrDefault(v => !v.IsTemplate
+               && v.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase));
       }
 
       /// <summary>
@@ -226,8 +270,16 @@ namespace Revit.IFC.Export.Exporter
                   {
                      Transform linkTrf = rvtLinkInstance.GetTransform();
                      ExporterCacheManager.Clear(false);
-                     ExportLinkedDocument(exporterIFC, rvtLinkInstance.Id, linkedDocument, 
-                        linkInfo.Value, linkTrf);
+                     try
+                     {
+                        ExportLinkedDocument(exporterIFC, rvtLinkInstance.Id, linkedDocument, 
+                           linkInfo.Value, linkTrf);
+                     }
+                     catch (System.Exception linkEx)
+                     {
+                        document.Application.WriteJournalComment(
+                           "ezBimOne IFC link export failed: " + linkEx, true);
+                     }
                   }
                }
             }
@@ -344,30 +396,17 @@ namespace Revit.IFC.Export.Exporter
             return new FilteredElementCollector(document, idsToExport);
          }
 
-         // A current limitation in the API is that we can't get a filter to show the elements
-         // from a link that are visible in a host document view.
          View filterView = useFilterViewIfExists ?
             exportOptionsCache.FilterViewForExport : null;
 
-         return (filterView == null || exportOptionsCache.ExportingLink) ?
-            new FilteredElementCollector(document) :
-            new FilteredElementCollector(filterView.Document, filterView.Id);
+         if (filterView == null)
+            return new FilteredElementCollector(document);
 
-         //if (filterView == null)
-         //{
-         //   return new FilteredElementCollector(document);
-         //}
+         // Host view, or a same-named 3D view swapped in for an R23 federated link.
+         if (filterView.Document.Equals(document))
+            return new FilteredElementCollector(document, filterView.Id);
 
-         //if (ExporterStateManager.CurrentLinkId != ElementId.InvalidElementId)
-         //{
-         //       
-         // Constructor of FilteredElementCollector that takes 3 argument will be available only in 2023.1 API (It will produce errors for addin users)
-         //
-         //   return new FilteredElementCollector(filterView.Document, filterView.Id,
-         //      ExporterStateManager.CurrentLinkId);
-         //}
-
-         //return new FilteredElementCollector(filterView.Document, filterView.Id);
+         return new FilteredElementCollector(document);
       }
 
       /// <summary>
@@ -552,6 +591,8 @@ namespace Revit.IFC.Export.Exporter
             statusBar.Set(string.Format(Resources.IFCProcessingRailings, railingIndex, railingCollectionCount, elementId));
             railingIndex++;
             Element element = document.GetElement(elementId);
+            if (element == null)
+               continue;
             ExportElement(exporterIFC, element);
          }
       }
@@ -757,13 +798,24 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="element ">The element got the exception.</param>
       internal void HandleUnexpectedException(Exception exception, Element element)
       {
-         Document document = element.Document;
-         string errMsg = string.Format("IFC error: Exporting element \"{0}\",{1} - {2}", element.Name, element.Id, exception.ToString());
-         element.Document.Application.WriteJournalComment(errMsg, true);
+         if (element == null)
+         {
+            return;
+         }
 
-         FailureMessage fm = new FailureMessage(BuiltInFailures.ExportFailures.IFCGenericExportWarning);
-         fm.SetFailingElement(element.Id);
-         document.PostFailure(fm);
+         try
+         {
+            Document document = element.Document;
+            string errMsg = string.Format("IFC error: Exporting element \"{0}\",{1} - {2}", element.Name, element.Id, exception.ToString());
+            document.Application.WriteJournalComment(errMsg, true);
+
+            FailureMessage fm = new FailureMessage(BuiltInFailures.ExportFailures.IFCGenericExportWarning);
+            fm.SetFailingElement(element.Id);
+            document.PostFailure(fm);
+         }
+         catch
+         {
+         }
       }
 
       /// <summary>
