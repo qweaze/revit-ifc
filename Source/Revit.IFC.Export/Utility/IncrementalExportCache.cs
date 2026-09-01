@@ -68,6 +68,13 @@ namespace Revit.IFC.Export.Utility
          if (string.IsNullOrEmpty(fullPath))
             return currentFile;
 
+         if (options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameProject ||
+             options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameSite)
+         {
+            Journal(document, "ezBimOne IFC incremental: skipped (federated links)");
+            return currentFile;
+         }
+
          string sidecarPath = SidecarPath(fullPath);
          if (!File.Exists(sidecarPath))
             return currentFile;
@@ -509,7 +516,8 @@ namespace Revit.IFC.Export.Utility
             options.ExcludeFilter ?? string.Empty,
             options.ExportBaseQuantities.ToString(),
             options.SiteTransformation.ToString(),
-            options.IFCFileFormat.ToString());
+            options.IFCFileFormat.ToString(),
+            options.ExportLinkedFileAs.ToString());
       }
 
       static string SidecarPath(string fullIfcPath) => fullIfcPath + ".ezcache.json";
