@@ -159,6 +159,8 @@ namespace Revit.IFC.Export.Exporter
          using (IFCLinkDocumentExportScope linkScope = new IFCLinkDocumentExportScope(document))
          {
             ExporterStateManager.CurrentLinkId = linkId;
+            ExporterStateManager.CurrentLinkTransform = linkTrf;
+            ExporterStateManager.FederatedLinkProductHandles.Clear();
             exporterIFC.SetCurrentExportedDocument(document);
 
             BeginLinkedDocumentExport(exporterIFC, document, guid);
@@ -184,6 +186,7 @@ namespace Revit.IFC.Export.Exporter
          try
          {
             ExporterCacheManager.ExporterIFC = exporterIFC;
+            ExportOptionsCache.HostDocument = document;
 
             IFCAnyHandleUtil.IFCStringTooLongWarn += (_1) => { document.Application.WriteJournalComment(_1, true); };
             IFCDataUtil.IFCStringTooLongWarn += (_1) => { document.Application.WriteJournalComment(_1, true); };
@@ -1233,6 +1236,14 @@ namespace Revit.IFC.Export.Exporter
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction transaction = new IFCTransaction(file))
          {
+            if (FederatedSameBuildingHelper.IsActive())
+            {
+               FederatedSameBuildingHelper.MapLinkLevelsToHost(
+                  exporterIFC, document, ExporterStateManager.CurrentLinkTransform);
+               transaction.Commit();
+               return;
+            }
+
             // create building
             IFCAnyHandle buildingPlacement = CreateBuildingPlacement(file);
 
@@ -1503,6 +1514,12 @@ namespace Revit.IFC.Export.Exporter
       {
          EndDocumentExportCommon(exporterIFC, document, true);
 
+         if (FederatedSameBuildingHelper.IsActive())
+         {
+            FederatedSameBuildingHelper.OrientLinkProducts(exporterIFC.GetFile(), linkTrf);
+            return;
+         }
+
          bool canUseSitePlacement = 
             ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs == LinkedFileExportAs.ExportSameProject;
          IFCAnyHandle topHandle = canUseSitePlacement ? 
@@ -1608,7 +1625,7 @@ namespace Revit.IFC.Export.Exporter
 
             if (!projectHasSite)
             {
-               if (!projectHasBuilding)
+               if (!projectHasBuilding && !FederatedSameBuildingHelper.IsActive())
                {
                   // if at this point the buildingHnd is null, which means that the model does not
                   // have Site nor any Level assigned to the BuildingStorey, create the IfcBuilding 
@@ -1621,25 +1638,31 @@ namespace Revit.IFC.Export.Exporter
                siteOrbuildingHnd = buildingHandle;
             }
 
+            LinkedFileExportAs linkExportAs = ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs;
+
             // Last chance to create the building handle was just above.
             if (projectHasSite)
             {
                // Don't add the relation if we've already created it, which is if we are
                // exporting a linked file in a federated export while we are sharing the site.
                if (!exportingLink ||
-                  ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs != LinkedFileExportAs.ExportSameSite)
+                  (linkExportAs != LinkedFileExportAs.ExportSameSite &&
+                   linkExportAs != LinkedFileExportAs.ExportSameBuilding))
                {
                   ExporterCacheManager.ContainmentCache.AddRelation(projectHandle, siteHandle);
                }
 
                if (projectHasBuilding)
                {
-                  // assoc. site to the building.
-                  ExporterCacheManager.ContainmentCache.AddRelation(siteHandle, buildingHandle);
+                  if (!exportingLink || linkExportAs != LinkedFileExportAs.ExportSameBuilding)
+                  {
+                     // assoc. site to the building.
+                     ExporterCacheManager.ContainmentCache.AddRelation(siteHandle, buildingHandle);
 
-                  IFCAnyHandle buildingPlacement = IFCAnyHandleUtil.GetObjectPlacement(buildingHandle);
-                  IFCAnyHandle relPlacement = IFCAnyHandleUtil.GetObjectPlacement(siteHandle);
-                  GeometryUtil.SetPlacementRelTo(buildingPlacement, relPlacement);
+                     IFCAnyHandle buildingPlacement = IFCAnyHandleUtil.GetObjectPlacement(buildingHandle);
+                     IFCAnyHandle relPlacement = IFCAnyHandleUtil.GetObjectPlacement(siteHandle);
+                     GeometryUtil.SetPlacementRelTo(buildingPlacement, relPlacement);
+                  }
                }
             }
             else
@@ -1742,6 +1765,8 @@ namespace Revit.IFC.Export.Exporter
                {
                   ElementId elementId = ExporterCacheManager.HandleToElementCache.Find(elemHnd);
                   Element elem = document.GetElement(elementId);
+                  if (elem != null)
+                     FederatedSameBuildingHelper.TrackProductHandle(elemHnd);
 
                   // if there is override, use the override otherwise use default
                   IFCAnyHandle overrideContainer = null;
@@ -1797,6 +1822,10 @@ namespace Revit.IFC.Export.Exporter
                HashSet<IFCAnyHandle> relatedElementSetForSite = new HashSet<IFCAnyHandle>();
                foreach (IFCAnyHandle indivSpace in buildingSpaces)
                {
+                  ElementId spaceElementId = ExporterCacheManager.HandleToElementCache.Find(indivSpace);
+                  if (spaceElementId != ElementId.InvalidElementId && document.GetElement(spaceElementId) != null)
+                     FederatedSameBuildingHelper.TrackProductHandle(indivSpace);
+
                   bool containerIsSite = projectHasSite;
                   bool containerIsBuilding = projectHasBuilding;
 
@@ -1870,7 +1899,9 @@ namespace Revit.IFC.Export.Exporter
                   continue;
 
                string guid = GUIDUtil.GenerateIFCGuidFrom(
-                  GUIDUtil.CreateGUIDString(IFCEntityType.IfcRelAssociatesMaterial, ExporterUtil.GetGlobalId(materialSetLayerUsage.Value.First())));
+                  GUIDUtil.CreateGUIDString(IFCEntityType.IfcRelAssociatesMaterial,
+                     ExporterUtil.GetGlobalId(materialSetLayerUsage.Key),
+                     materialSetLayerUsage.Value.First()));
                IFCInstanceExporter.CreateRelAssociatesMaterial(file, guid, ownerHistory,
                   null, null, materialSetLayerUsage.Value,
                   materialSetLayerUsage.Key);
@@ -1886,10 +1917,9 @@ namespace Revit.IFC.Export.Exporter
                if ((relatedObjects?.Count ?? 0) == 0)
                   continue;
 
-               // TODO_GUID: relAssoc.Value.First() is somewhat stable, as long as the objects
-               // always come in the same order and elements aren't deleted.
                string guid = GUIDUtil.GenerateIFCGuidFrom(
-                  GUIDUtil.CreateGUIDString(IFCEntityType.IfcRelAssociatesMaterial, relAssoc.Value.First()));
+                  GUIDUtil.CreateGUIDString(IFCEntityType.IfcRelAssociatesMaterial,
+                     relAssoc.Key, relAssoc.Value.First()));
                IFCInstanceExporter.CreateRelAssociatesMaterial(file, guid, ownerHistory,
                   null, null, relatedObjects, relAssoc.Key);
             }
@@ -3525,6 +3555,8 @@ namespace Revit.IFC.Export.Exporter
                continue;
 
             Element level = document.GetElement(levelId);
+            if (level == null)
+               continue;
 
             levelInfoMapping.TransferOrphanedLevelInfo(levelId);
             int nextLevelIdx = ii + 1;
@@ -3536,18 +3568,23 @@ namespace Revit.IFC.Export.Exporter
             HashSet<IFCAnyHandle> relatedProducts = productsAndElements.Item1;
             HashSet<IFCAnyHandle> relatedElements = productsAndElements.Item2;
 
-            using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, false))
+            bool sameBuildingLink = FederatedSameBuildingHelper.IsActive();
+
+            if (!sameBuildingLink)
             {
-               IFCAnyHandle buildingStoreyHandle = levelInfo.GetBuildingStorey();
-               if (!buildingStories.Contains(buildingStoreyHandle))
+               using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, false))
                {
-                  buildingStories.Add(buildingStoreyHandle);
-                  IFCExportInfoPair exportInfo = new IFCExportInfoPair(IFCEntityType.IfcBuildingStorey);
+                  IFCAnyHandle buildingStoreyHandle = levelInfo.GetBuildingStorey();
+                  if (!buildingStories.Contains(buildingStoreyHandle))
+                  {
+                     buildingStories.Add(buildingStoreyHandle);
+                     IFCExportInfoPair exportInfo = new IFCExportInfoPair(IFCEntityType.IfcBuildingStorey);
 
-                  // Add Property set, quantities and classification of Building Storey also to IFC
-                  productWrapper.AddElement(level, buildingStoreyHandle, levelInfo, null, false, exportInfo);
+                     // Add Property set, quantities and classification of Building Storey also to IFC
+                     productWrapper.AddElement(level, buildingStoreyHandle, levelInfo, null, false, exportInfo);
 
-                  ExporterUtil.ExportRelatedProperties(exporterIFC, level, productWrapper);
+                     ExporterUtil.ExportRelatedProperties(exporterIFC, level, productWrapper);
+                  }
                }
             }
 
@@ -3564,10 +3601,18 @@ namespace Revit.IFC.Export.Exporter
                IFCInstanceExporter.CreateRelContainedInSpatialStructure(file, guid, ExporterCacheManager.OwnerHistoryHandle, null, null, relatedElements, levelInfo.GetBuildingStorey());
             }
 
+            if (FederatedSameBuildingHelper.IsActive())
+            {
+               foreach (IFCAnyHandle hnd in relatedProducts)
+                  FederatedSameBuildingHelper.TrackProductHandle(hnd);
+               foreach (IFCAnyHandle hnd in relatedElements)
+                  FederatedSameBuildingHelper.TrackProductHandle(hnd);
+            }
+
             ii = nextLevelIdx - 1;
          }
 
-         if (buildingStories.Count > 0)
+         if (buildingStories.Count > 0 && !FederatedSameBuildingHelper.IsActive())
          {
             IFCAnyHandle buildingHnd = ExporterCacheManager.BuildingHandle;
             ProjectInfo projectInfo = document.ProjectInformation;

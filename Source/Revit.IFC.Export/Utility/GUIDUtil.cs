@@ -325,7 +325,7 @@ namespace Revit.IFC.Export.Utility
 
          // We want to preserve existing GUIDs, so we will only use entityType if there is a
          // conflict.
-         if (!ExporterCacheManager.GUIDCache.Contains(GenerateIFCGuidFrom(guidString, false)))
+         if (!ExporterCacheManager.GUIDCache.Contains(GenerateIFCGuidFrom(guidString)))
             return guidString;
 
          return CreateInternal(useInstanceGeometry, instanceOrSymbol,
@@ -503,6 +503,20 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
+      /// Namespace for federated link exports (BaseLinkedDocumentGUID or current link instance).
+      /// </summary>
+      private static string GetFederatedLinkNamespace()
+      {
+         if (!string.IsNullOrEmpty(ExporterCacheManager.BaseLinkedDocumentGUID))
+            return ExporterCacheManager.BaseLinkedDocumentGUID;
+
+         if (ExporterStateManager.CurrentLinkId != ElementId.InvalidElementId)
+            return "LinkId:" + ExporterStateManager.CurrentLinkId.IntegerValue;
+
+         return null;
+      }
+
+      /// <summary>
       /// Generates IFC GUID from a GUIDString.
       /// </summary>
       /// <param name="keyGenerator">The GUIDString, generated from handle information.</param>
@@ -513,10 +527,14 @@ namespace Revit.IFC.Export.Utility
          GUIDString.KeyType keyType = keyGenerator.GUIDType;
          string key = keyGenerator.Key;
 
-         if (useLinkGUID && ExporterCacheManager.BaseLinkedDocumentGUID != null)
+         if (useLinkGUID)
          {
-            keyType = GUIDString.KeyType.Hash;
-            key = ExporterCacheManager.BaseLinkedDocumentGUID + ":" + key;
+            string linkNamespace = GetFederatedLinkNamespace();
+            if (linkNamespace != null)
+            {
+               keyType = GUIDString.KeyType.Hash;
+               key = linkNamespace + ":" + key;
+            }
          }
 
          switch (keyType)
