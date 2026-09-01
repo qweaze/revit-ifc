@@ -27,6 +27,7 @@ namespace Revit.IFC.Export.Utility
       DontExport,
       ExportAsSeparate,
       ExportSameProject,
-      ExportSameSite
+      ExportSameSite,
+      ExportSameBuilding
    };
 }

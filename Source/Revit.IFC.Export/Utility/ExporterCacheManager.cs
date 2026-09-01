@@ -1521,8 +1521,20 @@ namespace Revit.IFC.Export.Utility
          }
 
          // Special case: if we are sharing the IfcSite, don't clear it after the host
-         // document export.
-         if (fullClear || ExportOptionsCache.ExportLinkedFileAs != LinkedFileExportAs.ExportSameSite)
+         // document export. SameBuilding also keeps site, building, and level cache.
+         bool keepSite = false;
+         bool keepBuilding = false;
+         LinkedFileExportAs linkExportAs = LinkedFileExportAs.ExportAsSeparate;
+
+         if (!fullClear && ExportOptionsCache != null)
+         {
+            linkExportAs = ExportOptionsCache.ExportLinkedFileAs;
+            keepSite = linkExportAs == LinkedFileExportAs.ExportSameSite ||
+               linkExportAs == LinkedFileExportAs.ExportSameBuilding;
+            keepBuilding = linkExportAs == LinkedFileExportAs.ExportSameBuilding;
+         }
+
+         if (fullClear || !keepSite)
          {
             SiteHandle = null;
          }
@@ -1536,7 +1548,8 @@ namespace Revit.IFC.Export.Utility
          m_AssemblyInstanceCache = null;
          BaseLinkedDocumentGUID = null;
          m_BeamSystemCache = null;
-         BuildingHandle = null;
+         if (fullClear || !keepBuilding)
+            BuildingHandle = null;
          m_CanExportBeamGeometryAsExtrusionCache = null;
          m_CategoryClassNameCache = null;
          m_CategoryTypeCache = null;
@@ -1569,7 +1582,8 @@ namespace Revit.IFC.Export.Utility
          m_HostPartsCache = null;
          m_InternallyCreatedRootHandles = null;
          m_IsExternalParameterValueCache = null;
-         LevelInfoCache.Clear(ExporterIFC);
+         if (fullClear || linkExportAs != LinkedFileExportAs.ExportSameBuilding)
+            LevelInfoCache.Clear(ExporterIFC);
          m_MaterialIdToStyleHandleCache = null;
          MaterialSetUsageCache = new MaterialSetUsageCache();
          m_MaterialSetCache = null;

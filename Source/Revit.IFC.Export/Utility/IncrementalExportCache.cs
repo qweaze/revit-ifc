@@ -69,7 +69,8 @@ namespace Revit.IFC.Export.Utility
             return currentFile;
 
          if (options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameProject ||
-             options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameSite)
+             options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameSite ||
+             options.ExportLinkedFileAs == LinkedFileExportAs.ExportSameBuilding)
          {
             Journal(document, "ezBimOne IFC incremental: skipped (federated links)");
             return currentFile;
