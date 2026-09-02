@@ -370,6 +370,9 @@ namespace Revit.IFC.Export.Utility
          bool? exportRoomsInView = OptionsUtil.GetNamedBooleanOption(options, "ExportRoomsInView");
          cache.ExportRoomsInView = exportRoomsInView != null ? exportRoomsInView.Value : false;
 
+         bool? exportGridsInView = OptionsUtil.GetNamedBooleanOption(options, "ExportGridsInView");
+         cache.ExportGridsInView = exportGridsInView != null ? exportGridsInView.Value : false;
+
          // Include IFCSITE elevation in the site local placement origin
          bool? includeIfcSiteElevation = OptionsUtil.GetNamedBooleanOption(options, "IncludeSiteElevation");
          cache.IncludeSiteElevation = includeIfcSiteElevation != null ? includeIfcSiteElevation.Value : false;
@@ -1107,6 +1110,16 @@ namespace Revit.IFC.Export.Utility
       /// However, if Room is set to "Not Exported" in IFC Option then none of the room will be exported whether ExportRoomsInView is true or not.
       /// </remarks>
       public bool ExportRoomsInView
+      {
+         get;
+         set;
+      }
+
+      /// <summary>
+      /// Whether or not to export all host grids when exporting by view filter.
+      /// Link grids are never exported (ezBimOne federated host-only policy).
+      /// </summary>
+      public bool ExportGridsInView
       {
          get;
          set;
