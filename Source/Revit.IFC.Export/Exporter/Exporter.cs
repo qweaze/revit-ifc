@@ -693,8 +693,44 @@ namespace Revit.IFC.Export.Exporter
 
       protected void ExportGrids(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
       {
-         // Export the grids
+         if (ExporterStateManager.CurrentLinkId != ElementId.InvalidElementId)
+         {
+            document.Application.WriteJournalComment(
+               "ezBimOne IFC: skipping link grids (host only)", true);
+            return;
+         }
+
+         ExportOptionsCache exportOptionsCache = ExporterCacheManager.ExportOptionsCache;
+         View filterView = exportOptionsCache.FilterViewForExport;
+
+         if (exportOptionsCache.ExportGridsInView && filterView != null)
+            SupplementGridCache(exporterIFC, document);
+
          GridExporter.Export(exporterIFC, document);
+      }
+
+      /// <summary>
+      /// When ExportGridsInView is enabled, collect all exportable host grids from the document
+      /// (not only those visible on the filter view), bypassing TrySkipUnchanged/GridCache gaps.
+      /// </summary>
+      private void SupplementGridCache(ExporterIFC exporterIFC, Document document)
+      {
+         List<Element> gridCache = ExporterCacheManager.GridCache;
+         gridCache.Clear();
+
+         int count = 0;
+         foreach (Grid grid in new FilteredElementCollector(document).OfClass(typeof(Grid)).Cast<Grid>())
+         {
+            if (!CanExportElement(exporterIFC, grid))
+               continue;
+
+            gridCache.Add(grid);
+            IncrementalExportCache.Record(grid);
+            count++;
+         }
+
+         document.Application.WriteJournalComment(
+            "ezBimOne IFC ExportGridsInView: supplemented " + count + " grids", true);
       }
 
       protected void ExportConnectors(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
