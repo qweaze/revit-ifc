@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -75,22 +75,22 @@ namespace BIM.IFC.Export.UI
       {
          // These are the built-in configurations.  Provide a more extensible means of storage.
          // Order of construction: name, version, space boundaries, QTO, split walls, internal sets, 2d elems, boundingBox
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3CV2, 0, false, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3, 1, false, false, true, false, false, false, false, false, true, false, false, includeSteelElements: true));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFCCOBIE, 2, true, true, true, false, false, false, false, false, true, true, false, includeSteelElements: true));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3BFM, 1, true, true, false, false, false, false, false, false, true, false, false, includeSteelElements: true));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x2, 1, false, false, true, false, false, false, false, false, false, false, false));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3FM, 1, true, false, false, false, true, true, false, false, true, true, false, includeSteelElements: true));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true,
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3CV2, 0, false, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3, 1, false, false, true, false, false, false, false, false, true, false, LinkedFileExportAs.DontExport, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFCCOBIE, 2, true, true, true, false, false, false, false, false, true, true, LinkedFileExportAs.DontExport, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3BFM, 1, true, true, false, false, false, false, false, false, true, false, LinkedFileExportAs.DontExport, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x2, 1, false, false, true, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC2x3FM, 1, true, false, false, false, true, true, false, false, true, true, LinkedFileExportAs.DontExport, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true,
             exchangeRequirement:KnownERNames.Architecture));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true,
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true,
             exchangeRequirement:KnownERNames.Structural));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true,
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4RV, 0, true, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true,
             exchangeRequirement:KnownERNames.BuildingService));
-         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4DTV, 0, true, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true));
+         AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(IFCVersion.IFC4DTV, 0, true, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true));
          //Handling the IFC4x3 format for using the IFC Extension with Revit versions older than 2023.1 which does not support IFC4x3.
          if(OptionsUtil.IsIFC4x3Supported())
-            AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(OptionsUtil.GetIFCVersionByName("IFC4x3"), 0, true, false, false, false, false, false, false, false, false, false, false, includeSteelElements: true));
+            AddOrReplace(IFCExportConfiguration.CreateBuiltInConfiguration(OptionsUtil.GetIFCVersionByName("IFC4x3"), 0, true, false, false, false, false, false, false, false, false, false, LinkedFileExportAs.DontExport, includeSteelElements: true));
       }
 
       /// <summary>
@@ -160,7 +160,7 @@ namespace BIM.IFC.Export.UI
 
                      Field fieldExportLinkedFiles = m_OldSchema.GetField(s_setupExportLinkedFiles);
                      if (fieldExportLinkedFiles != null)
-                        configuration.ExportLinkedFiles = configEntity.Get<bool>(s_setupExportLinkedFiles);
+                        configuration.ExportLinkedFiles = configEntity.Get<bool>(s_setupExportLinkedFiles) ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport;
                      Field fieldIncludeSiteElevation = m_OldSchema.GetField(s_setupIncludeSiteElevation);
                      if (fieldIncludeSiteElevation != null)
                         configuration.IncludeSiteElevation = configEntity.Get<bool>(s_setupIncludeSiteElevation);
@@ -260,7 +260,7 @@ namespace BIM.IFC.Export.UI
                      if (configMap.ContainsKey(s_setupExportUserDefinedParameterMappingFileName))
                         configuration.ExportUserDefinedParameterMappingFileName = configMap[s_setupExportUserDefinedParameterMappingFileName];
                      if (configMap.ContainsKey(s_setupExportLinkedFiles))
-                        configuration.ExportLinkedFiles = bool.Parse(configMap[s_setupExportLinkedFiles]);
+                        configuration.ExportLinkedFiles = bool.Parse(configMap[s_setupExportLinkedFiles]) ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport;
                      if (configMap.ContainsKey(s_setupIncludeSiteElevation))
                         configuration.IncludeSiteElevation = bool.Parse(configMap[s_setupIncludeSiteElevation]);
                      if (configMap.ContainsKey(s_setupStoreIFCGUID))

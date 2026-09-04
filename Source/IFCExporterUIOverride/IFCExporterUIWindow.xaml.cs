@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -20,7 +20,6 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
 using Autodesk.Revit.UI;
-using Autodesk.UI.Windows;
 using Microsoft.Win32;
 using Revit.IFC.Common.Utility;
 using Revit.IFC.Export.Utility;
@@ -31,7 +30,6 @@ using System.Linq;
 using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-using UserInterfaceUtility.Json;
 using Revit.IFC.Common.Enums;
 using Revit.IFC.Common.Extensions;
 
@@ -40,7 +38,7 @@ namespace BIM.IFC.Export.UI
    /// <summary>
    /// The IFC export UI options window.
    /// </summary>
-   public partial class IFCExporterUIWindow : ChildWindow
+   public partial class IFCExporterUIWindow : Window
    {
       // This is intended to be a placeholder for treeView_FilterElement XAML code that isn't ready for release.
       // The code will populate this but the user will have no control.
@@ -100,7 +98,7 @@ namespace BIM.IFC.Export.UI
          else
          {
             IFCExport.LastSelectedConfig.Add(originalConfiguration.Name, originalConfiguration);
-            originalConfiguration.SelectedSite = IFCExport.TheDocument.ActiveProjectLocation.Name;
+            if (IFCExport.TheDocument != null) originalConfiguration.SelectedSite = IFCExport.TheDocument.ActiveProjectLocation.Name;
             UpdateActiveConfigurationOptions(originalConfiguration);
             GetGeoReferenceInfo(originalConfiguration);
          }
@@ -231,13 +229,25 @@ namespace BIM.IFC.Export.UI
             }
          }
 
+         if (!comboboxLinkedFiles.HasItems)
+         {
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.DontExport));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportAsSeparate));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameProject));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameSite));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameBuilding));
+         }
+
          if (!comboboxActivePhase.HasItems)
          {
-            PhaseArray phaseArray = document.Phases; 
             comboboxActivePhase.Items.Add(new IFCPhaseAttributes(ElementId.InvalidElementId));  // Default.
-            foreach (Phase phase in phaseArray)
+            if (document != null)
             {
-               comboboxActivePhase.Items.Add(new IFCPhaseAttributes(phase.Id));
+               PhaseArray phaseArray = document.Phases;
+               foreach (Phase phase in phaseArray)
+               {
+                  comboboxActivePhase.Items.Add(new IFCPhaseAttributes(phase.Id));
+               }
             }
          }
 
@@ -250,7 +260,7 @@ namespace BIM.IFC.Export.UI
             comboBoxLOD.Items.Add(Properties.Resources.DetailLevelHigh);
          }
 
-         if (!comboBoxProjectSite.HasItems)
+         if (!comboBoxProjectSite.HasItems && document != null)
          {
             foreach (ProjectLocation pLoc in document.ProjectLocations.Cast<ProjectLocation>().ToList())
             {
@@ -278,7 +288,7 @@ namespace BIM.IFC.Export.UI
 
       private void UpdatePhaseAttributes(IFCExportConfiguration configuration)
       {
-         if (configuration.VisibleElementsOfCurrentView)
+         if (configuration.VisibleElementsOfCurrentView && IFCExport.TheDocument != null)
          {
             UIDocument uiDoc = new UIDocument(IFCExport.TheDocument);
             Parameter currPhase = uiDoc.ActiveView.get_Parameter(BuiltInParameter.VIEW_PHASE);
@@ -342,7 +352,7 @@ namespace BIM.IFC.Export.UI
          if (!string.IsNullOrEmpty(configuration.SelectedSite))
             m_SiteLocations.TryGetValue(configuration.SelectedSite, out projectLocation);
 
-         if (string.IsNullOrEmpty(configuration.SelectedSite) || projectLocation == null)
+         if ((string.IsNullOrEmpty(configuration.SelectedSite) || projectLocation == null) && IFCExport.TheDocument != null)
             configuration.SelectedSite = IFCExport.TheDocument.ActiveProjectLocation.Name;
 
          comboBoxProjectSite.SelectedItem = configuration.SelectedSite;
@@ -376,10 +386,19 @@ namespace BIM.IFC.Export.UI
          checkboxExportUserDefinedPset.IsChecked = configuration.ExportUserDefinedPsets;
          userDefinedPropertySetFileName.Text = configuration.ExportUserDefinedPsetsFileName;
          checkboxUseTypePropertiesInInstacePSets.IsChecked = configuration.UseTypePropertiesInInstacePSets;
-         checkBoxExportLinkedFiles.IsChecked = configuration.ExportLinkedFiles;
+         foreach (IFCLinkedFileExportAs attribute in comboboxLinkedFiles.Items.Cast<IFCLinkedFileExportAs>())
+         {
+            if (configuration.ExportLinkedFiles == attribute.ExportAs)
+            {
+               comboboxLinkedFiles.SelectedItem = attribute;
+               break;
+            }
+         }
          checkboxIncludeIfcSiteElevation.IsChecked = configuration.IncludeSiteElevation;
          checkboxStoreIFCGUID.IsChecked = configuration.StoreIFCGUID;
          checkBoxExportRoomsInView.IsChecked = configuration.ExportRoomsInView;
+         checkBoxExportGridsInView.IsChecked = configuration.ExportGridsInView;
+         checkBoxFilterGridsLevelsByView.IsChecked = configuration.FilterGridsLevelsByView;
          comboBoxLOD.SelectedIndex = (int)(Math.Round(configuration.TessellationLevelOfDetail * 4) - 1);
          checkboxIncludeSteelElements.IsChecked = configuration.IncludeSteelElements;
          comboBoxSitePlacement.SelectedIndex = (int)configuration.SitePlacement;
@@ -719,7 +738,7 @@ namespace BIM.IFC.Export.UI
             using (StreamWriter sw = new StreamWriter(saveFileDialog.FileName))
             {
                JavaScriptSerializer js = new JavaScriptSerializer();
-               sw.Write(SerializerUtils.FormatOutput(js.Serialize(configToSave)));
+               sw.Write(js.Serialize(configToSave));
             }
          }
       }
@@ -757,7 +776,7 @@ namespace BIM.IFC.Export.UI
                      // set new configuration as selected
                      listBoxConfigurations.Items.Add(configuration);
                      listBoxConfigurations.SelectedItem = configuration;
-                     IFCClassificationMgr.UpdateClassification(IFCExport.TheDocument, configuration.ClassificationSettings);
+                     if (IFCExport.TheDocument != null) IFCClassificationMgr.UpdateClassification(IFCExport.TheDocument, configuration.ClassificationSettings);
                   }
                }
             }
@@ -1155,6 +1174,14 @@ namespace BIM.IFC.Export.UI
          else
          { 
             Document doc = IFCExport.TheDocument;
+            if (doc == null)
+            {
+               TextBox_Eastings.Text = "";
+               TextBox_Northings.Text = "";
+               TextBox_RefElevation.Text = "";
+               TextBox_AngleFromTN.Text = "";
+               return;
+            }
 
             if (comboBoxProjectSite.SelectedItem == null)
             {
@@ -1163,12 +1190,15 @@ namespace BIM.IFC.Export.UI
                   m_SiteLocations.TryGetValue(configuration.SelectedSite, out projectLocation);
 
                if (string.IsNullOrEmpty(configuration.SelectedSite) || projectLocation == null)
-                  configuration.SelectedSite = IFCExport.TheDocument.ActiveProjectLocation.Name;
+                  configuration.SelectedSite = doc.ActiveProjectLocation.Name;
 
                comboBoxProjectSite.SelectedItem = configuration.SelectedSite;
             }
 
-            ProjectLocation projLocation = m_SiteLocations[comboBoxProjectSite.SelectedItem.ToString()];
+            if (comboBoxProjectSite.SelectedItem == null ||
+                !m_SiteLocations.TryGetValue(comboBoxProjectSite.SelectedItem.ToString(), out ProjectLocation projLocation))
+               return;
+
             (double eastings, double northings, double orthogonalHeight, double angleTN, double origAngleTN) geoRefInfo =
                OptionsUtil.ScaledGeoReferenceInformation(doc, configuration.SitePlacement, projLocation);
             TextBox_Eastings.Text = geoRefInfo.eastings.ToString("F4");
@@ -1411,18 +1441,32 @@ namespace BIM.IFC.Export.UI
       }
 
       /// <summary>
-      /// Update checkbox for export linked files option
+      /// Update linked files export mode.
       /// </summary>
-      /// <param name="sender">The source of the event.</param>
-      /// <param name="e">Event arguments that contains the event data.</param>
-      private void checkBoxExportLinkedFiles_Checked(object sender, RoutedEventArgs e)
+      private void comboboxLinkedFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
+      {
+         IFCLinkedFileExportAs attributes = comboboxLinkedFiles.SelectedItem as IFCLinkedFileExportAs;
+         IFCExportConfiguration configuration = GetSelectedConfiguration();
+         if (attributes != null && configuration != null)
+         {
+            configuration.ExportLinkedFiles = attributes.ExportAs;
+         }
+      }
+
+      private void checkBoxExportGridsInView_Checked(object sender, RoutedEventArgs e)
       {
          CheckBox checkBox = (CheckBox)sender;
          IFCExportConfiguration configuration = GetSelectedConfiguration();
          if (configuration != null)
-         {
-            configuration.ExportLinkedFiles = GetCheckbuttonChecked(checkBox);
-         }
+            configuration.ExportGridsInView = GetCheckbuttonChecked(checkBox);
+      }
+
+      private void checkBoxFilterGridsLevelsByView_Checked(object sender, RoutedEventArgs e)
+      {
+         CheckBox checkBox = (CheckBox)sender;
+         IFCExportConfiguration configuration = GetSelectedConfiguration();
+         if (configuration != null)
+            configuration.FilterGridsLevelsByView = GetCheckbuttonChecked(checkBox);
       }
 
       /// <summary>
@@ -1665,6 +1709,8 @@ namespace BIM.IFC.Export.UI
             if (!string.IsNullOrEmpty(epsgStr))
             {
                Document doc = IFCExport.TheDocument;
+               if (doc == null)
+                  return;
                // If it is a valid EPSG code, get the relevant geo reference information and temporarily set the SiteLocation
                using (Transaction tmpSiteLoc = new Transaction(doc, "Temp Set GeoRefeference"))
                {

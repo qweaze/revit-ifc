@@ -1,10 +1,9 @@
-﻿<auiw:ChildWindow x:Class="BIM.IFC.Export.UI.EntityTree"
+<Window x:Class="BIM.IFC.Export.UI.EntityTree"
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                   xmlns:System="clr-namespace:System;assembly=mscorlib"
                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                  xmlns:auiw="clr-namespace:Autodesk.UI.Windows;assembly=Autodesk.UI.Windows"
                   xmlns:p="clr-namespace:BIM.IFC.Export.UI.Properties"
                   mc:Ignorable="d"
                   Title="{x:Static p:Resources.SelectSingleElement}"
@@ -13,8 +12,7 @@
                   MinHeight="600" 
                   MinWidth="650"
                   ResizeMode="CanResize"
-                  WindowStyle="SingleBorderWindow"
-                  SaveWindowSettings="True">
+                  WindowStyle="SingleBorderWindow">
    <Grid x:Name="Grid_Main" Margin="0,0,2,0">
       <Grid.ColumnDefinitions>
          <ColumnDefinition Width="248"/>
@@ -61,4 +59,4 @@
          <Button x:Name="Button_Cancel" Content="{x:Static p:Resources.Cancel}" HorizontalAlignment="Left" Width="80" Click="Button_Cancel_Click" Padding="1"/>
       </StackPanel>
    </Grid>
-</auiw:ChildWindow>
+</Window>

@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -17,7 +17,6 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using Autodesk.Revit.DB;
-using Autodesk.UI.Windows;
 using Revit.IFC.Common.Extensions;
 using System;
 using System.Linq;
@@ -31,7 +30,7 @@ namespace BIM.IFC.Export.UI
    /// <summary>
    /// Interaction logic for File Header Tab in IFCAddressInformationUI.xaml
    /// </summary>
-   public partial class IFCAddressInformation : ChildWindow
+   public partial class IFCAddressInformation : Window
    {
       private string[] ifcPurposeList = { "OFFICE", "SITE", "HOME", "DISTRIBUTIONPOINT", "USERDEFINED" };
       private string[] purposeList =

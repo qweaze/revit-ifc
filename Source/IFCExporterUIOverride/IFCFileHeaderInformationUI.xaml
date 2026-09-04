@@ -1,16 +1,14 @@
-﻿<auiw:ChildWindow x:Class="BIM.IFC.Export.UI.IFCFileHeaderInformation"
+<Window x:Class="BIM.IFC.Export.UI.IFCFileHeaderInformation"
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:p="clr-namespace:BIM.IFC.Export.UI.Properties"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                  xmlns:auiw="clr-namespace:Autodesk.UI.Windows;assembly=Autodesk.UI.Windows"
                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
                   mc:Ignorable="d" 
                   Title="{x:Static p:Resources.FileHeader}" 
                   ResizeMode ="NoResize" 
                   Name="FileHeaderTab" 
-                  Loaded="Window_Loaded" 
-                  SaveWindowSettings="False"
+                  Loaded="Window_Loaded"
                   Initialized="FileHeaderTab_Initialized" 
                   SizeToContent="WidthAndHeight" 
                   HorizontalAlignment="Stretch" 
@@ -49,4 +47,4 @@
             <Button Content="{x:Static p:Resources.Cancel}" Height="22" x:Name="buttonCancel" Width="75" Click="bottonCancel_Click" Margin="310,343,33,11" Grid.Column="1" RenderTransformOrigin="0.547,1.273"/>
         </Grid>
     </Grid>
-</auiw:ChildWindow>
+</Window>
