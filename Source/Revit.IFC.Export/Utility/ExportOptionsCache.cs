@@ -373,6 +373,9 @@ namespace Revit.IFC.Export.Utility
          bool? exportGridsInView = OptionsUtil.GetNamedBooleanOption(options, "ExportGridsInView");
          cache.ExportGridsInView = exportGridsInView != null ? exportGridsInView.Value : false;
 
+         bool? filterGridsLevelsByView = OptionsUtil.GetNamedBooleanOption(options, "FilterGridsLevelsByView");
+         cache.FilterGridsLevelsByView = filterGridsLevelsByView != null ? filterGridsLevelsByView.Value : false;
+
          // Include IFCSITE elevation in the site local placement origin
          bool? includeIfcSiteElevation = OptionsUtil.GetNamedBooleanOption(options, "IncludeSiteElevation");
          cache.IncludeSiteElevation = includeIfcSiteElevation != null ? includeIfcSiteElevation.Value : false;
@@ -1120,6 +1123,15 @@ namespace Revit.IFC.Export.Utility
       /// Link grids are never exported (ezBimOne federated host-only policy).
       /// </summary>
       public bool ExportGridsInView
+      {
+         get;
+         set;
+      }
+
+      /// <summary>
+      /// When true, export only grids and levels visible on the filter view.
+      /// </summary>
+      public bool FilterGridsLevelsByView
       {
          get;
          set;

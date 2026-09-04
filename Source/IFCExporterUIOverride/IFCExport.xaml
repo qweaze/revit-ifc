@@ -1,17 +1,15 @@
-﻿<!-- TODO: use resources to govern externalized strings.  (static initialization failure when loaded into Revit even though it shows perfectly well in the Dialog editor) -->
-<auiw:ChildWindow x:Class="BIM.IFC.Export.UI.IFCExport"
+<!-- TODO: use resources to govern externalized strings.  (static initialization failure when loaded into Revit even though it shows perfectly well in the Dialog editor) -->
+<Window x:Class="BIM.IFC.Export.UI.IFCExport"
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:p="clr-namespace:BIM.IFC.Export.UI.Properties"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-                  xmlns:auiw="clr-namespace:Autodesk.UI.Windows;assembly=Autodesk.UI.Windows"
                   xmlns:System="clr-namespace:System;assembly=mscorlib" 
                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
                   mc:Ignorable="d" 
                   Title="{x:Static p:Resources.IFCExport}" 
                   WindowStyle="SingleBorderWindow" 
-                  ContentRendered="ChildWindow_ContentRendered"
-                  SaveWindowSettings="True" 
+                  ContentRendered="ChildWindow_ContentRendered" 
                   Height="438" 
                   Width="730" MinWidth="550" MinHeight="305">
    <Grid Margin="10,0" RenderTransformOrigin="0,0">
@@ -69,11 +67,11 @@
          Background="Transparent"/>
    </Grid>
 
-   <auiw:ChildWindow.Resources>
+   <Window.Resources>
       <System:String x:Key="ifcExportWindowTitle">{x:Static p:Resources.IFCExport}</System:String>
       <System:String x:Key="currentSelectedSetup">{x:Static p:Resources.CurrentSelectedSetup}</System:String>
       <System:String x:Key="next">{x:Static p:Resources.Next}</System:String>
       <System:String x:Key="saveSetupAndClose">{x:Static p:Resources.SaveSetupAndClose}</System:String>
       <System:String x:Key="cancel">{x:Static p:Resources.Cancel}</System:String>
-   </auiw:ChildWindow.Resources>
-</auiw:ChildWindow>
+   </Window.Resources>
+</Window>

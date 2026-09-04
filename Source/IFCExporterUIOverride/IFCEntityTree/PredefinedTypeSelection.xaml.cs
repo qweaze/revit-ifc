@@ -1,16 +1,15 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using Autodesk.Revit.DB;
 using Revit.IFC.Common.Utility;
-using Autodesk.UI.Windows;
 
 namespace BIM.IFC.Export.UI
 { 
    /// <summary>
    /// Interaction logic for PredefinedTypeSelection.xaml
    /// </summary>
-   public partial class PredefinedTypeSelection : ChildWindow
+   public partial class PredefinedTypeSelection : Window
    {
       TreeView m_TreeView = new TreeView();
       TreeViewItem prevSelectedItem = null;

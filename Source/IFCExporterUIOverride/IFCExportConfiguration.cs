@@ -144,6 +144,16 @@ namespace BIM.IFC.Export.UI
       /// If the section box isn't visible, then all the rooms are exported if this option is set.
       /// </remarks>
       public bool ExportRoomsInView { get; set; } = false;
+      /// <summary>
+      /// ezBim: export host grids even when not visible on the filter view.
+      /// </summary>
+      public bool ExportGridsInView { get; set; } = false;
+
+      /// <summary>
+      /// ezBim: keep only grids/levels visible on the export filter view.
+      /// </summary>
+      public bool FilterGridsLevelsByView { get; set; } = false;
+
 
       #endregion     //AdditionalContentTab
 
@@ -609,6 +619,13 @@ namespace BIM.IFC.Export.UI
       /// </summary>
       /// <param name="options">The IFCExportOptions to update.</param>
       /// <param name="filterViewId">The id of the view that will be used to select which elements to export.</param>
+      
+      public static bool IsDefinedIfcVersion(IFCVersion version) =>
+         Enum.IsDefined(typeof(IFCVersion), version);
+
+      public static string DescribeIfcVersionError(IFCVersion version) =>
+         $"IFCVersion {(int)version} is not supported by this Revit API. IFC4 Reference View = {(int)IFCVersion.IFC4RV} (IFC4RV), IFC2x3 Coordination View 2 = {(int)IFCVersion.IFC2x3CV2} (IFC2x3CV2).";
+
       public void UpdateOptions(IFCExportOptions options, ElementId filterViewId)
       {
       	 JavaScriptSerializer ser = new JavaScriptSerializer();
@@ -622,6 +639,8 @@ namespace BIM.IFC.Export.UI
                   options.AddOption("ConfigName", Name);      // Add config name into the option for use in the exporter
                   break;
                case "IFCVersion":
+                  if (!IsDefinedIfcVersion(IFCVersion))
+                     throw new ArgumentOutOfRangeException(nameof(IFCVersion), DescribeIfcVersionError(IFCVersion));
                   options.FileVersion = IFCVersion;
                   break;
                case "ActivePhaseId":

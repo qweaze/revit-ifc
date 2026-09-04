@@ -653,6 +653,9 @@ namespace Revit.IFC.Export.Exporter
          if (exportOptionsCache.ExportGridsInView && filterView != null)
             SupplementGridCache(exporterIFC, document);
 
+         if (exportOptionsCache.FilterGridsLevelsByView && filterView != null)
+            FilterGridCacheByViewVisibility(document);
+
          GridExporter.Export(exporterIFC, document);
       }
 
@@ -678,6 +681,23 @@ namespace Revit.IFC.Export.Exporter
 
          document.Application.WriteJournalComment(
             "ezBimOne IFC ExportGridsInView: supplemented " + count + " grids", true);
+      }
+
+      /// <summary>
+      /// Keep only grids visible on the export filter view (FilterGridsLevelsByView).
+      /// </summary>
+      private static void FilterGridCacheByViewVisibility(Document document)
+      {
+         List<Element> gridCache = ExporterCacheManager.GridCache;
+         int before = gridCache.Count;
+         for (int i = gridCache.Count - 1; i >= 0; i--)
+         {
+            if (!ElementFilteringUtil.IsElementVisible(gridCache[i]))
+               gridCache.RemoveAt(i);
+         }
+
+         document.Application.WriteJournalComment(
+            "ezBimOne IFC FilterGridsLevelsByView: grids " + before + "->" + gridCache.Count, true);
       }
 
       protected void ExportConnectors(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
@@ -1288,6 +1308,26 @@ namespace Revit.IFC.Export.Exporter
             // create levels
             // Check if there is any level assigned as a building storey, if no at all, model will be exported without Building and BuildingStorey, all containment will be to Site
             IList<Level> allLevels = LevelUtil.FindAllLevels(document);
+            ExportOptionsCache exportOptionsCache = ExporterCacheManager.ExportOptionsCache;
+            if (exportOptionsCache.FilterGridsLevelsByView &&
+                exportOptionsCache.FilterViewForExport != null)
+            {
+               int before = allLevels.Count;
+               List<Level> filtered = allLevels.Where(ElementFilteringUtil.IsElementVisible).ToList();
+               bool anyStory = filtered.Any(LevelUtil.IsBuildingStory);
+               if (!anyStory)
+               {
+                  // Soft fallback: OST_Levels often hidden on 3D export views
+                  document.Application.WriteJournalComment(
+                     "ezBimOne IFC FilterGridsLevelsByView: no visible building stories, keeping all levels", true);
+               }
+               else
+               {
+                  allLevels = filtered;
+                  document.Application.WriteJournalComment(
+                     "ezBimOne IFC FilterGridsLevelsByView: levels " + before + "->" + allLevels.Count, true);
+               }
+            }
 
             bool exportBuilding = ExportBuilding(allLevels);
 

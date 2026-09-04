@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -18,7 +18,6 @@
 //
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Autodesk.UI.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,7 +36,7 @@ namespace BIM.IFC.Export.UI
    /// <summary>
    /// Interaction logic for IFCExport.xaml
    /// </summary>
-   public partial class IFCExport : ChildWindow
+   public partial class IFCExport : Window
    {
       // The list of available configurations
       IFCExportConfigurationsMap m_configMap;
@@ -71,7 +70,7 @@ namespace BIM.IFC.Export.UI
       public static Document TheDocument
       {
          get;
-         protected set;
+         set;
       }
 
       /// <summary>
@@ -835,7 +834,7 @@ namespace BIM.IFC.Export.UI
       /// so the parent doesn't launch its own help on top of ours
       /// </summary>
       /// <returns></returns>
-      protected override bool OnContextHelp()
+      protected bool OnContextHelp()
       {
          // launch help
          Autodesk.Revit.UI.ContextualHelp help = new Autodesk.Revit.UI.ContextualHelp(Autodesk.Revit.UI.ContextualHelpType.ContextId, "HID_EXPORT_IFC");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -7,14 +7,13 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Autodesk.Revit.DB;
 using Revit.IFC.Common.Utility;
-using Autodesk.UI.Windows;
 
 namespace BIM.IFC.Export.UI
 {
    /// <summary>
    /// Interaction logic for EntityTree.xaml
    /// </summary>
-   public partial class EntityTree : ChildWindow
+   public partial class EntityTree : Window
    {
       TreeView m_TreeView = new TreeView();
       TreeViewItem PrevSelPDefItem = null;
@@ -940,7 +939,7 @@ namespace BIM.IFC.Export.UI
          button_ExpandAll.IsEnabled = false;
       }
 
-      protected override bool OnContextHelp()
+      protected bool OnContextHelp()
       {
          string contextIdName = null;
          if (m_SingleNodeSelection)
