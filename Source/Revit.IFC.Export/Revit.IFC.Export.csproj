@@ -239,6 +239,8 @@
     <Compile Include="Utility\ElementOrConnector.cs" />
     <Compile Include="Utility\FabricParams.cs" />
     <Compile Include="Utility\LinkedFileExportAs.cs" />
+    <Compile Include="Utility\IncrementalExportCache.cs" />
+    <Compile Include="Utility\FederatedSameBuildingHelper.cs" />
     <Compile Include="Utility\MaterialConstituentCache.cs" />
     <Compile Include="Utility\MaterialLayerSetInfo.cs" />
     <Compile Include="Utility\ClassificationLocationCache.cs" />

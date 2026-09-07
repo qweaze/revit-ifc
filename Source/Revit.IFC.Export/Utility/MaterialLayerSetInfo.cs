@@ -321,8 +321,12 @@ namespace Revit.IFC.Export.Utility
          m_needToGenerateIFCObjects = false;
          IFCAnyHandle materialLayerSet = null;
 
-         if (m_ProductWrapper != null && !m_ProductWrapper.ToNative().IsValidObject)
-            m_ProductWrapper = null;
+         if (m_ProductWrapper != null)
+         {
+            IFCProductWrapper native = m_ProductWrapper.ToNative();
+            if (native == null || !native.IsValidObject)
+               m_ProductWrapper = null;
+         }
 
          m_ProductWrapper?.ClearFinishMaterials();
 
@@ -375,7 +379,9 @@ namespace Revit.IFC.Export.Utility
          }
 
          IFCFile file = m_ExporterIFC.GetFile();
-         Document document = ExporterCacheManager.Document;
+         Document document = m_Element?.Document ?? ExporterCacheManager.Document;
+         if (document == null)
+            return;
 
          IList<IFCAnyHandle> layers = new List<IFCAnyHandle>(numLayersToCreate);
          IList<Tuple<string, IFCAnyHandle>> layerWidthQuantities = new List<Tuple<string, IFCAnyHandle>>();
@@ -395,7 +401,7 @@ namespace Revit.IFC.Export.Utility
             IFCLogical? isVentilated = null;
             int isVentilatedValue;
 
-            Material material = document.GetElement(MaterialIds[ii].m_baseMatId) as Material;
+            Material material = document.GetElement(MaterialIds[widthIndex].m_baseMatId) as Material;
             if (material != null)
             {
                if (ParameterUtil.GetIntValueFromElement(material, "IfcMaterialLayer.IsVentilated", out isVentilatedValue) != null)

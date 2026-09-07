@@ -95,13 +95,14 @@ namespace Revit.IFC.Export.Utility
 
       public bool IncludeSteelElements { get; set; }
 
-      /// Private default constructor.
-      /// </summary>
       /// <summary>
-      /// Federated link instance ElementId.IntegerValue → IFC GUID string.
+      /// Federated link instance ElementId.IntegerValue -> IFC GUID string.
       /// </summary>
       public IDictionary<int, string> FederatedLinkInfo { get; set; } = null;
 
+      /// <summary>
+      /// Private default constructor.
+      /// </summary>
       private ExportOptionsCache()
       {
       }

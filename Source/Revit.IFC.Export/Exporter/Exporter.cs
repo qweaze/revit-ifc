@@ -157,6 +157,8 @@ namespace Revit.IFC.Export.Exporter
 
          try
          {
+            ExportOptionsCache.HostDocument = document;
+
             IFCAnyHandleUtil.IFCStringTooLongWarn += (_1) => { document.Application.WriteJournalComment(_1, true); };
             IFCDataUtil.IFCStringTooLongWarn += (_1) => { document.Application.WriteJournalComment(_1, true); };
 
@@ -168,6 +170,15 @@ namespace Revit.IFC.Export.Exporter
 
             IncrementalExportCache.SweepDeleted(exporterIFC);
             IncrementalExportCache.WriteJournalSummary(document);
+
+            IDictionary<int, string> linkInfos =
+               ExporterCacheManager.ExportOptionsCache.FederatedLinkInfo;
+            if (linkInfos != null && linkInfos.Count > 0)
+            {
+               document.Application.WriteJournalComment(
+                  \"ezBimOne IFC: \" + linkInfos.Count +
+                  \" federated link(s) requested (in-file federated merge not available on IFC_v22 structure)\", true);
+            }
 
             EndExport(exporterIFC, document);
             WriteIFCFile(exporterIFC, document);
@@ -559,8 +570,50 @@ namespace Revit.IFC.Export.Exporter
 
       protected void ExportGrids(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
       {
-         // Export the grids
+         ExportOptionsCache exportOptionsCache = ExporterCacheManager.ExportOptionsCache;
+         View filterView = exportOptionsCache.FilterViewForExport;
+
+         if (exportOptionsCache.ExportGridsInView && filterView != null)
+            SupplementGridCache(exporterIFC, document);
+
+         if (exportOptionsCache.FilterGridsLevelsByView && filterView != null)
+            FilterGridCacheByViewVisibility(document);
+
          GridExporter.Export(exporterIFC, document);
+      }
+
+      private void SupplementGridCache(ExporterIFC exporterIFC, Document document)
+      {
+         List<Element> gridCache = ExporterCacheManager.GridCache;
+         gridCache.Clear();
+
+         int count = 0;
+         foreach (Grid grid in new FilteredElementCollector(document).OfClass(typeof(Grid)).Cast<Grid>())
+         {
+            if (!CanExportElement(exporterIFC, grid))
+               continue;
+
+            gridCache.Add(grid);
+            IncrementalExportCache.Record(grid);
+            count++;
+         }
+
+         document.Application.WriteJournalComment(
+            "ezBimOne IFC ExportGridsInView: supplemented " + count + " grids", true);
+      }
+
+      private static void FilterGridCacheByViewVisibility(Document document)
+      {
+         List<Element> gridCache = ExporterCacheManager.GridCache;
+         int before = gridCache.Count;
+         for (int i = gridCache.Count - 1; i >= 0; i--)
+         {
+            if (!ElementFilteringUtil.IsElementVisible(gridCache[i]))
+               gridCache.RemoveAt(i);
+         }
+
+         document.Application.WriteJournalComment(
+            "ezBimOne IFC FilterGridsLevelsByView: grids " + before + "->" + gridCache.Count, true);
       }
 
       protected void ExportConnectors(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
@@ -1121,12 +1174,19 @@ namespace Revit.IFC.Export.Exporter
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction transaction = new IFCTransaction(file))
          {
-            // create building
-            IFCAnyHandle applicationHandle = CreateApplicationInformation(file, document);
-
             CreateGlobalCartesianOrigin(exporterIFC);
             CreateGlobalDirection(exporterIFC);
             CreateGlobalDirection2D(exporterIFC);
+
+            if (IncrementalExportCache.Active)
+            {
+               document.Application.WriteJournalComment("ezBimOne IFC incremental: reuse previous IFCFile", true);
+               transaction.Commit();
+               return;
+            }
+
+            // create building
+            IFCAnyHandle applicationHandle = CreateApplicationInformation(file, document);
 
             IFCAnyHandle buildingPlacement = CreateBuildingPlacement(file);
 
@@ -1137,7 +1197,25 @@ namespace Revit.IFC.Export.Exporter
 
             // create levels
             // Check if there is any level assigned as a building storey, if no at all, model will be exported without Building and BuildingStorey, all containment will be to Site
-            List<Level> levels = LevelUtil.FindAllLevels(document);
+            List<Level> levels = LevelUtil.FindAllLevels(document).ToList();
+            ExportOptionsCache optsForLevels = ExporterCacheManager.ExportOptionsCache;
+            if (optsForLevels.FilterGridsLevelsByView && optsForLevels.FilterViewForExport != null)
+            {
+               int before = levels.Count;
+               List<Level> filtered = levels.Where(ElementFilteringUtil.IsElementVisible).ToList();
+               bool anyStory = filtered.Any(LevelUtil.IsBuildingStory);
+               if (!anyStory)
+               {
+                  document.Application.WriteJournalComment(
+                     "ezBimOne IFC FilterGridsLevelsByView: no visible building stories, keeping all levels", true);
+               }
+               else
+               {
+                  levels = filtered;
+                  document.Application.WriteJournalComment(
+                     "ezBimOne IFC FilterGridsLevelsByView: levels " + before + "->" + levels.Count, true);
+               }
+            }
             bool exportBuilding = false;
             foreach (Level level in levels)
             {
@@ -1490,7 +1568,7 @@ namespace Revit.IFC.Export.Exporter
 
             if (!projectHasSite)
             {
-               if (!projectHasBuilding)
+               if (!projectHasBuilding && !FederatedSameBuildingHelper.IsActive())
                {
                   // if at this point the buildingHnd is null, which means that the model does not
                   // have Site nor any Level assigned to the BuildingStorey, create the IfcBuilding 
