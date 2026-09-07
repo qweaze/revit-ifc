@@ -1,4 +1,4 @@
-//
+﻿//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -386,8 +386,6 @@ namespace BIM.IFC.Export.UI
                break;
             }
          }
-         checkBoxExportGridsInView.IsChecked = configuration.ExportGridsInView;
-         checkBoxFilterGridsLevelsByView.IsChecked = configuration.FilterGridsLevelsByView;
          checkboxIncludeIfcSiteElevation.IsChecked = configuration.IncludeSiteElevation;
          checkboxStoreIFCGUID.IsChecked = configuration.StoreIFCGUID;
          checkBoxExportRoomsInView.IsChecked = configuration.ExportRoomsInView;
@@ -433,8 +431,6 @@ namespace BIM.IFC.Export.UI
                                                                 checkboxExportBoundingBox,
                                                                 checkboxExportSolidModelRep,
                                                                 comboboxLinkedFiles,
-                                                                checkBoxExportGridsInView,
-                                                                checkBoxFilterGridsLevelsByView,
                                                                 checkboxIncludeIfcSiteElevation,
                                                                 checkboxStoreIFCGUID,
                                                                 checkboxExportMaterialPsets,
@@ -1409,22 +1405,6 @@ namespace BIM.IFC.Export.UI
          {
             configuration.ExportLinkedFiles = attributes.ExportAs;
          }
-      }
-
-      private void checkBoxExportGridsInView_Checked(object sender, RoutedEventArgs e)
-      {
-         CheckBox checkBox = (CheckBox)sender;
-         IFCExportConfiguration configuration = GetSelectedConfiguration();
-         if (configuration != null)
-            configuration.ExportGridsInView = GetCheckbuttonChecked(checkBox);
-      }
-
-      private void checkBoxFilterGridsLevelsByView_Checked(object sender, RoutedEventArgs e)
-      {
-         CheckBox checkBox = (CheckBox)sender;
-         IFCExportConfiguration configuration = GetSelectedConfiguration();
-         if (configuration != null)
-            configuration.FilterGridsLevelsByView = GetCheckbuttonChecked(checkBox);
       }
 
       /// <summary>

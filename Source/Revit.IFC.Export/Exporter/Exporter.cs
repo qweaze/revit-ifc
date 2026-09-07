@@ -570,50 +570,16 @@ namespace Revit.IFC.Export.Exporter
 
       protected void ExportGrids(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
       {
-         ExportOptionsCache exportOptionsCache = ExporterCacheManager.ExportOptionsCache;
-         View filterView = exportOptionsCache.FilterViewForExport;
+         // Federated: host grids only — avoid duplicate IfcGrid from links.
+         if (ExporterStateManager.CurrentLinkId != ElementId.InvalidElementId)
+         {
+            document.Application.WriteJournalComment(
+               "ezBimOne IFC: skipping link grids (host only)", true);
+            return;
+         }
 
-         if (exportOptionsCache.ExportGridsInView && filterView != null)
-            SupplementGridCache(exporterIFC, document);
-
-         if (exportOptionsCache.FilterGridsLevelsByView && filterView != null)
-            FilterGridCacheByViewVisibility(document);
-
+         // Standard Autodesk: GridCache filled from view collector during ExportElement.
          GridExporter.Export(exporterIFC, document);
-      }
-
-      private void SupplementGridCache(ExporterIFC exporterIFC, Document document)
-      {
-         List<Element> gridCache = ExporterCacheManager.GridCache;
-         gridCache.Clear();
-
-         int count = 0;
-         foreach (Grid grid in new FilteredElementCollector(document).OfClass(typeof(Grid)).Cast<Grid>())
-         {
-            if (!CanExportElement(exporterIFC, grid))
-               continue;
-
-            gridCache.Add(grid);
-            IncrementalExportCache.Record(grid);
-            count++;
-         }
-
-         document.Application.WriteJournalComment(
-            "ezBimOne IFC ExportGridsInView: supplemented " + count + " grids", true);
-      }
-
-      private static void FilterGridCacheByViewVisibility(Document document)
-      {
-         List<Element> gridCache = ExporterCacheManager.GridCache;
-         int before = gridCache.Count;
-         for (int i = gridCache.Count - 1; i >= 0; i--)
-         {
-            if (!ElementFilteringUtil.IsElementVisible(gridCache[i]))
-               gridCache.RemoveAt(i);
-         }
-
-         document.Application.WriteJournalComment(
-            "ezBimOne IFC FilterGridsLevelsByView: grids " + before + "->" + gridCache.Count, true);
       }
 
       protected void ExportConnectors(ExporterIFC exporterIFC, Autodesk.Revit.DB.Document document)
@@ -1198,24 +1164,6 @@ namespace Revit.IFC.Export.Exporter
             // create levels
             // Check if there is any level assigned as a building storey, if no at all, model will be exported without Building and BuildingStorey, all containment will be to Site
             List<Level> levels = LevelUtil.FindAllLevels(document).ToList();
-            ExportOptionsCache optsForLevels = ExporterCacheManager.ExportOptionsCache;
-            if (optsForLevels.FilterGridsLevelsByView && optsForLevels.FilterViewForExport != null)
-            {
-               int before = levels.Count;
-               List<Level> filtered = levels.Where(ElementFilteringUtil.IsElementVisible).ToList();
-               bool anyStory = filtered.Any(LevelUtil.IsBuildingStory);
-               if (!anyStory)
-               {
-                  document.Application.WriteJournalComment(
-                     "ezBimOne IFC FilterGridsLevelsByView: no visible building stories, keeping all levels", true);
-               }
-               else
-               {
-                  levels = filtered;
-                  document.Application.WriteJournalComment(
-                     "ezBimOne IFC FilterGridsLevelsByView: levels " + before + "->" + levels.Count, true);
-               }
-            }
             bool exportBuilding = false;
             foreach (Level level in levels)
             {

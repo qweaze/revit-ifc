@@ -518,9 +518,7 @@ namespace Revit.IFC.Export.Utility
             options.ExportBaseQuantities.ToString(),
             options.SiteTransformation.ToString(),
             options.IFCFileFormat.ToString(),
-            options.ExportLinkedFileAs.ToString(),
-            options.ExportGridsInView.ToString(),
-            options.FilterGridsLevelsByView.ToString());
+            options.ExportLinkedFileAs.ToString());
       }
 
       static string SidecarPath(string fullIfcPath) => fullIfcPath + ".ezcache.json";

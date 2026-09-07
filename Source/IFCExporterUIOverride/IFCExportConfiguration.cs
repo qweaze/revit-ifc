@@ -142,16 +142,6 @@ namespace BIM.IFC.Export.UI
       /// If the section box isn't visible, then all the rooms are exported if this option is set.
       /// </remarks>
       public bool ExportRoomsInView { get; set; } = false;
-      /// <summary>
-      /// ezBim: export host grids even when not visible on the filter view.
-      /// </summary>
-      public bool ExportGridsInView { get; set; } = false;
-
-      /// <summary>
-      /// ezBim: keep only grids/levels visible on the export filter view.
-      /// </summary>
-      public bool FilterGridsLevelsByView { get; set; } = false;
-
 
       #endregion     //AdditionalContentTab
 

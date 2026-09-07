@@ -1,4 +1,4 @@
-<Window x:Class="BIM.IFC.Export.UI.IFCExporterUIWindow"
+﻿<Window x:Class="BIM.IFC.Export.UI.IFCExporterUIWindow"
                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                   xmlns:p="clr-namespace:BIM.IFC.Export.UI.Properties"
                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -39,8 +39,6 @@
                     <Label Content="{x:Static p:Resources.ExportLinkedFiles}" Margin="10,5,0,0" x:Name="linkedFiles" HorizontalAlignment="Left" Width="275" Height="26" VerticalAlignment="Top" />
                     <CheckBox Content="{x:Static p:Resources.ExportVisibleElementsInView}" Margin="10,29,0,0" Name="checkboxVisibleElementsCurrView" Checked="checkboxVisibleElementsCurrView_Checked" Unchecked="checkboxVisibleElementsCurrView_Checked" RenderTransformOrigin="0.634,0.968" HorizontalAlignment="Left" Width="570" Height="16" VerticalAlignment="Top" />
                     <CheckBox Content="{x:Static p:Resources.ExportRoomsInView}" x:Name="checkBoxExportRoomsInView" Checked="checkBoxExportRoomsInView_Checked" Unchecked="checkBoxExportRoomsInView_Checked" IsEnabled="False" Margin="30,50,0,0" HorizontalAlignment="Left" Width="550" Height="16" VerticalAlignment="Top" />
-                    <CheckBox Content="Export grids (host, view export)" x:Name="checkBoxExportGridsInView" Checked="checkBoxExportGridsInView_Checked" Unchecked="checkBoxExportGridsInView_Checked" Margin="30,71,0,0" HorizontalAlignment="Left" Width="550" Height="16" VerticalAlignment="Top" />
-                    <CheckBox Content="Only grids/levels visible in view" x:Name="checkBoxFilterGridsLevelsByView" Checked="checkBoxFilterGridsLevelsByView_Checked" Unchecked="checkBoxFilterGridsLevelsByView_Checked" Margin="30,92,0,0" HorizontalAlignment="Left" Width="550" Height="16" VerticalAlignment="Top" />
                     <CheckBox Content="{x:Static p:Resources.ExportPlanViewElements}" Margin="10,113,0,0" x:Name="checkbox2dElements" Checked="checkbox2dElements_Checked" Unchecked="checkbox2dElements_Checked" RenderTransformOrigin="0.634,0.968" HorizontalAlignment="Left" Width="578" Height="16" VerticalAlignment="Top" />
                     <CheckBox Content="{x:Static p:Resources.IncludeSteelElements}" Margin="10,134,0,0" x:Name="checkboxIncludeSteelElements" Checked="checkboxIncludeSteelElements_Checked" Unchecked="checkboxIncludeSteelElements_Unchecked" HorizontalAlignment="Left" Width="373" Height="16" VerticalAlignment="Top"/>
                 </Grid>
