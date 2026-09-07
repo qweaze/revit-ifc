@@ -1,4 +1,4 @@
-//
+﻿//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -397,8 +397,6 @@ namespace BIM.IFC.Export.UI
          checkboxIncludeIfcSiteElevation.IsChecked = configuration.IncludeSiteElevation;
          checkboxStoreIFCGUID.IsChecked = configuration.StoreIFCGUID;
          checkBoxExportRoomsInView.IsChecked = configuration.ExportRoomsInView;
-         checkBoxExportGridsInView.IsChecked = configuration.ExportGridsInView;
-         checkBoxFilterGridsLevelsByView.IsChecked = configuration.FilterGridsLevelsByView;
          comboBoxLOD.SelectedIndex = (int)(Math.Round(configuration.TessellationLevelOfDetail * 4) - 1);
          checkboxIncludeSteelElements.IsChecked = configuration.IncludeSteelElements;
          comboBoxSitePlacement.SelectedIndex = (int)configuration.SitePlacement;
@@ -1805,22 +1803,6 @@ namespace BIM.IFC.Export.UI
          {
             configuration.ExportLinkedFiles = attributes.ExportAs;
          }
-      }
-
-      private void checkBoxExportGridsInView_Checked(object sender, RoutedEventArgs e)
-      {
-         CheckBox checkBox = (CheckBox)sender;
-         IFCExportConfiguration configuration = GetSelectedConfiguration();
-         if (configuration != null)
-            configuration.ExportGridsInView = GetCheckbuttonChecked(checkBox);
-      }
-
-      private void checkBoxFilterGridsLevelsByView_Checked(object sender, RoutedEventArgs e)
-      {
-         CheckBox checkBox = (CheckBox)sender;
-         IFCExportConfiguration configuration = GetSelectedConfiguration();
-         if (configuration != null)
-            configuration.FilterGridsLevelsByView = GetCheckbuttonChecked(checkBox);
       }
    }
 }
