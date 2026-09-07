@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2016  Autodesk, Inc.
 // 
@@ -18,6 +18,7 @@
 //
 
 using Autodesk.Revit.DB;
+using Revit.IFC.Export.Utility;
 using Autodesk.Revit.DB.IFC;
 using Autodesk.Revit.UI;
 using Autodesk.UI.Windows;
@@ -370,7 +371,7 @@ namespace BIM.IFC.Export.UI
          checkBoxExportSpecificSchedules.IsChecked = configuration.ExportSpecificSchedules;
          checkboxExportUserDefinedPset.IsChecked = configuration.ExportUserDefinedPsets;
          userDefinedPropertySetFileName.Text = configuration.ExportUserDefinedPsetsFileName;
-         checkBoxExportLinkedFiles.IsChecked = configuration.ExportLinkedFiles;
+         checkBoxExportLinkedFiles.IsChecked = configuration.ExportLinkedFiles != LinkedFileExportAs.DontExport;
          checkboxIncludeIfcSiteElevation.IsChecked = configuration.IncludeSiteElevation;
          checkboxStoreIFCGUID.IsChecked = configuration.StoreIFCGUID;
          checkBoxExportRoomsInView.IsChecked = configuration.ExportRoomsInView;
@@ -1388,7 +1389,7 @@ namespace BIM.IFC.Export.UI
          IFCExportConfiguration configuration = GetSelectedConfiguration();
          if (configuration != null)
          {
-            configuration.ExportLinkedFiles = GetCheckbuttonChecked(checkBox);
+            configuration.ExportLinkedFiles = GetCheckbuttonChecked(checkBox) ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport;
          }
       }
 

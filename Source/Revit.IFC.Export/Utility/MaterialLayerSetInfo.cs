@@ -451,7 +451,7 @@ namespace Revit.IFC.Export.Utility
          if (layers.Count > 0)
          {
             ElementType type = document.GetElement(typeElemId) as ElementType;
-            string layerSetBaseName = type.FamilyName + ":" + type.Name;
+            string layerSetBaseName = type != null ? type.FamilyName + ":" + type.Name : "LayerSet";
             string layerSetName = NamingUtil.GetOverrideStringValue(type, "IfcMaterialLayerSet.Name", layerSetBaseName);
             string layerSetDesc = NamingUtil.GetOverrideStringValue(type, "IfcMaterialLayerSet.Description", null);
 

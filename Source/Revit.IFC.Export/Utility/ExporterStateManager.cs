@@ -134,6 +134,16 @@ namespace Revit.IFC.Export.Utility
       static public ElementId CurrentLinkId { get; set; } = ElementId.InvalidElementId;
 
       /// <summary>
+      /// Transform of the Revit link instance currently being federated.
+      /// </summary>
+      static public Transform CurrentLinkTransform { get; set; } = null;
+
+      /// <summary>
+      /// IFC product handles exported for the current federated link (ExportSameBuilding).
+      /// </summary>
+      static public HashSet<IFCAnyHandle> FederatedLinkProductHandles { get; } = new HashSet<IFCAnyHandle>();
+
+      /// <summary>
       /// A utility class that manages pushing and popping CAD layer overrides for containers.  Intended to be using with "using" keyword.
       /// </summary>
       public class CADLayerOverrideSetter : IDisposable
@@ -212,6 +222,8 @@ namespace Revit.IFC.Export.Utility
          CADLayerOverrides.Clear();
          RangeIndex = 0;
          CurrentLinkId = ElementId.InvalidElementId;
+         CurrentLinkTransform = null;
+         FederatedLinkProductHandles.Clear();
       }
    }
 }

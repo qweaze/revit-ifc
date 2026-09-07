@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC library: this library works with Autodesk(R) Revit(R) to export IFC files containing model geometry.
 // Copyright (C) 2012-2016  Autodesk, Inc.
 // 
@@ -97,6 +97,11 @@ namespace Revit.IFC.Export.Utility
 
       /// Private default constructor.
       /// </summary>
+      /// <summary>
+      /// Federated link instance ElementId.IntegerValue → IFC GUID string.
+      /// </summary>
+      public IDictionary<int, string> FederatedLinkInfo { get; set; } = null;
+
       private ExportOptionsCache()
       {
       }
@@ -209,6 +214,41 @@ namespace Revit.IFC.Export.Utility
       /// </summary>
       /// <param name="exporterIFC">The ExporterIFC handle passed during export.</param>
       /// <returns>The new cache.</returns>
+      private static IDictionary<int, string> ParseFederatedLinkInfo(
+         string federatedInfoString)
+      {
+         if (federatedInfoString == null)
+            return null;
+
+         IDictionary<int, string> federatedLinkInfo =
+            new SortedDictionary<int, string>();
+
+         string[] idsAndGuids = federatedInfoString.Split(';');
+         foreach (string idAndGuid in idsAndGuids)
+         {
+            if (idAndGuid == null)
+               continue;
+
+            string[] idGuidPair = idAndGuid.Split(',');
+            if (idGuidPair.Length != 2)
+               continue;
+
+            int idInt;
+            if (!int.TryParse(idGuidPair[0], out idInt))
+               continue;
+
+            if (federatedLinkInfo.ContainsKey(idInt))
+               continue;
+
+            if (string.IsNullOrWhiteSpace(idGuidPair[1]))
+               continue;
+
+            federatedLinkInfo[idInt] = idGuidPair[1];
+         }
+
+         return federatedLinkInfo;
+      }
+
       public static ExportOptionsCache Create(ExporterIFC exporterIFC, Document document, Autodesk.Revit.DB.View filterView)
       {
          IDictionary<String, String> options = exporterIFC.GetOptions();
@@ -313,6 +353,12 @@ namespace Revit.IFC.Export.Utility
          bool? exportRoomsInView = OptionsUtil.GetNamedBooleanOption(options, "ExportRoomsInView");
          cache.ExportRoomsInView = exportRoomsInView != null ? exportRoomsInView.Value : false;
 
+         bool? exportGridsInView = OptionsUtil.GetNamedBooleanOption(options, "ExportGridsInView");
+         cache.ExportGridsInView = exportGridsInView != null ? exportGridsInView.Value : false;
+
+         bool? filterGridsLevelsByView = OptionsUtil.GetNamedBooleanOption(options, "FilterGridsLevelsByView");
+         cache.FilterGridsLevelsByView = filterGridsLevelsByView != null ? filterGridsLevelsByView.Value : false;
+
          // Include IFCSITE elevation in the site local placement origin
          bool? includeIfcSiteElevation = OptionsUtil.GetNamedBooleanOption(options, "IncludeSiteElevation");
          cache.IncludeSiteElevation = includeIfcSiteElevation != null ? includeIfcSiteElevation.Value : false;
@@ -405,8 +451,24 @@ namespace Revit.IFC.Export.Utility
 
          cache.SelectedParametermappingTableName = OptionsUtil.GetNamedStringOption(options, "ExportUserDefinedParameterMappingFileName");
 
-         bool? bExportLinks = OptionsUtil.GetNamedBooleanOption(options, "ExportingLinks");
-         cache.ExportingLink = (bExportLinks.HasValue && bExportLinks.Value == true);
+         string federatedInfoString = OptionsUtil.GetNamedStringOption(options, "FederatedLinkInfo");
+         cache.FederatedLinkInfo = ParseFederatedLinkInfo(federatedInfoString);
+
+         string exportLinkedFileAsString = OptionsUtil.GetNamedStringOption(options, "ExportingLinks");
+         if (!string.IsNullOrWhiteSpace(exportLinkedFileAsString))
+         {
+            if (Enum.TryParse(exportLinkedFileAsString, out LinkedFileExportAs linkedFileExportAs))
+               cache.ExportLinkedFileAs = linkedFileExportAs;
+            else
+            {
+               bool? bExportLinks = OptionsUtil.GetNamedBooleanOption(options, "ExportingLinks");
+               if (bExportLinks == true)
+                  cache.ExportLinkedFileAs = LinkedFileExportAs.ExportAsSeparate;
+            }
+         }
+
+         if (cache.ExportLinkedFileAs == LinkedFileExportAs.ExportAsSeparate)
+            cache.ExportingLink = true;
 
          if (cache.ExportingLink)
          {
@@ -1036,6 +1098,25 @@ namespace Revit.IFC.Export.Utility
       /// However, if Room is set to "Not Exported" in IFC Option then none of the room will be exported whether ExportRoomsInView is true or not.
       /// </remarks>
       public bool ExportRoomsInView
+      {
+         get;
+         set;
+      }
+
+      /// <summary>
+      /// Whether or not to export all host grids when exporting by view filter.
+      /// Link grids are never exported (ezBimOne federated host-only policy).
+      /// </summary>
+      public bool ExportGridsInView
+      {
+         get;
+         set;
+      }
+
+      /// <summary>
+      /// When true, export only grids and levels visible on the filter view.
+      /// </summary>
+      public bool FilterGridsLevelsByView
       {
          get;
          set;

@@ -1,4 +1,4 @@
-﻿//
+//
 // BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
 // Copyright (C) 2012  Autodesk, Inc.
 // 
@@ -126,7 +126,8 @@ namespace BIM.IFC.Export.UI
       /// <summary>
       /// Specify how we export linked files.
       /// </summary>
-      public bool ExportLinkedFiles { get; set; } = false;
+      [PropertyUpgrader(typeof(ExportLinkedFilesPropertyUpgrader))]
+      public LinkedFileExportAs ExportLinkedFiles { get; set; } = LinkedFileExportAs.DontExport;
 
       /// <summary>
       /// True to export only the visible elements of the current view (based on filtering and/or element and category hiding). 
@@ -141,6 +142,16 @@ namespace BIM.IFC.Export.UI
       /// If the section box isn't visible, then all the rooms are exported if this option is set.
       /// </remarks>
       public bool ExportRoomsInView { get; set; } = false;
+      /// <summary>
+      /// ezBim: export host grids even when not visible on the filter view.
+      /// </summary>
+      public bool ExportGridsInView { get; set; } = false;
+
+      /// <summary>
+      /// ezBim: keep only grids/levels visible on the export filter view.
+      /// </summary>
+      public bool FilterGridsLevelsByView { get; set; } = false;
+
 
       #endregion     //AdditionalContentTab
 
@@ -428,7 +439,7 @@ namespace BIM.IFC.Export.UI
                                  bool userDefinedParameterMapping,
                                  bool PlanElems2D,
                                  bool exportBoundingBox,
-                                 bool exportLinkedFiles,
+                                 LinkedFileExportAs exportLinkedFiles,
                                  string excludeFilter = "",
                                  bool includeSteelElements = false,
                                  KnownERNames exchangeRequirement = KnownERNames.NotDefined,
@@ -560,6 +571,12 @@ namespace BIM.IFC.Export.UI
       /// </summary>
       /// <param name="options">The IFCExportOptions to update.</param>
       /// <param name="filterViewId">The id of the view that will be used to select which elements to export.</param>
+      public static bool IsDefinedIfcVersion(IFCVersion version) =>
+         Enum.IsDefined(typeof(IFCVersion), version);
+
+      public static string DescribeIfcVersionError(IFCVersion version) =>
+         string.Format("IFCVersion {0} is not supported by this Revit API. IFC4 Reference View = {1} (IFC4RV), IFC2x3 Coordination View 2 = {2} (IFC2x3CV2).", (int)version, (int)IFCVersion.IFC4RV, (int)IFCVersion.IFC2x3CV2);
+
       public void UpdateOptions(IFCExportOptions options, ElementId filterViewId)
       {
          JavaScriptSerializer ser = new JavaScriptSerializer();
@@ -567,10 +584,15 @@ namespace BIM.IFC.Export.UI
          {
             switch (prop.Name)
             {
+               case "ExportLinkedFiles":
+                  options.AddOption("ExportingLinks", ExportLinkedFiles.ToString());
+                  break;
                case "Name":
                   options.AddOption("ConfigName", Name);      // Add config name into the option for use in the exporter
                   break;
                case "IFCVersion":
+                  if (!IsDefinedIfcVersion(IFCVersion))
+                     throw new ArgumentOutOfRangeException(nameof(IFCVersion), DescribeIfcVersionError(IFCVersion));
                   options.FileVersion = IFCVersion;
                   break;
                case "ActivePhaseId":

@@ -166,8 +166,12 @@ namespace Revit.IFC.Export.Exporter
             InitializeElementExporters();
             m_ElementExporter?.Invoke(exporterIFC, document);
 
+            IncrementalExportCache.SweepDeleted(exporterIFC);
+            IncrementalExportCache.WriteJournalSummary(document);
+
             EndExport(exporterIFC, document);
             WriteIFCFile(exporterIFC, document);
+            IncrementalExportCache.SaveSidecar();
          }
          catch (Exception ex)
          {
@@ -183,6 +187,7 @@ namespace Revit.IFC.Export.Exporter
          }
          finally
          {
+            IncrementalExportCache.Reset();
             ExporterCacheManager.Clear(true);
             ExporterStateManager.Clear();
 
@@ -634,8 +639,16 @@ namespace Revit.IFC.Export.Exporter
          {
             using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, true))
             {
-               ExportElementImpl(exporterIFC, element, productWrapper);
-               ExporterUtil.ExportRelatedProperties(exporterIFC, element, productWrapper);
+               if (IncrementalExportCache.TrySkipUnchanged(exporterIFC, element, productWrapper))
+               {
+               }
+               else
+               {
+                  IncrementalExportCache.PrepareChanged(exporterIFC, element);
+                  ExportElementImpl(exporterIFC, element, productWrapper);
+                  ExporterUtil.ExportRelatedProperties(exporterIFC, element, productWrapper);
+               }
+               IncrementalExportCache.Record(element);
             }
 
             // We are going to clear the parameter cache for the element (not the type) after the export.
@@ -1098,6 +1111,8 @@ namespace Revit.IFC.Export.Exporter
 
          m_IfcFile = IFCFile.Create(modelOptions);
          exporterIFC.SetFile(m_IfcFile);
+         IncrementalExportCache.SetModelOptions(modelOptions);
+         m_IfcFile = IncrementalExportCache.TryActivate(exporterIFC, document, m_IfcFile);
 
          //init common properties
          InitializePropertySets();
