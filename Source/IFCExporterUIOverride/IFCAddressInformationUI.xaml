@@ -1,14 +1,12 @@
-﻿<auiw:ChildWindow  x:Class="BIM.IFC.Export.UI.IFCAddressInformation"
+<Window  x:Class="BIM.IFC.Export.UI.IFCAddressInformation"
                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                    xmlns:p="clr-namespace:BIM.IFC.Export.UI.Properties"
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                   xmlns:auiw="clr-namespace:Autodesk.UI.Windows;assembly=Autodesk.UI.Windows"
-                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
                    Title="{x:Static p:Resources.AddressInformation}" 
                    ResizeMode ="NoResize" 
-                   Name="AddressTab" 
-                   SaveWindowSettings="True"
+                   Name="AddressTab"
                    mc:Ignorable="d" 
                    Initialized="AddressTab_Initialized" 
                    d:DesignWidth="560" 
@@ -54,4 +52,4 @@
         <CheckBox Content="{x:Static p:Resources.AssignAddressToBuilding}" Height="16" x:Name="Checkbox_AssignToBuilding" Margin="0,427,10,0" VerticalAlignment="Top" Grid.Column="1" HorizontalAlignment="Right" Width="250" IsChecked="True" Checked="Checkbox_AssignToBuilding_Checked" Unchecked="Checkbox_AssignToBuilding_Unchecked"/>
         <CheckBox Content="{x:Static p:Resources.AssignAddressToSite}" Height="16" x:Name="Checkbox_AssignToSite" Margin="0,448,10,0" VerticalAlignment="Top" Grid.Column="1" HorizontalAlignment="Right" Width="250" Checked="Checkbox_AssignToSite_Checked" Unchecked="Checkbox_AssignToSite_Unchecked"/>
     </Grid>
-</auiw:ChildWindow>
+</Window>

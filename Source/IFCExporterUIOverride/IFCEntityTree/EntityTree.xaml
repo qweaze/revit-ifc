@@ -13,8 +13,7 @@
                   MinHeight="600" 
                   MinWidth="650"
                   ResizeMode="CanResize"
-                  WindowStyle="SingleBorderWindow"
-                  SaveWindowSettings="True">
+                  WindowStyle="SingleBorderWindow">
    <Grid x:Name="Grid_Main" Margin="0,0,2,0">
       <Grid.ColumnDefinitions>
          <ColumnDefinition Width="248"/>

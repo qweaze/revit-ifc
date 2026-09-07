@@ -21,7 +21,7 @@ using Autodesk.Revit.DB;
 using Revit.IFC.Export.Utility;
 using Autodesk.Revit.DB.IFC;
 using Autodesk.Revit.UI;
-using Autodesk.UI.Windows;
+using System.Windows;
 using Microsoft.Win32;
 using Revit.IFC.Common.Utility;
 using System;
@@ -29,9 +29,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Script.Serialization;
-using System.Windows;
 using System.Windows.Controls;
-using UserInterfaceUtility.Json;
 using Revit.IFC.Common.Enums;
 using Revit.IFC.Common.Extensions;
 
@@ -40,7 +38,7 @@ namespace BIM.IFC.Export.UI
    /// <summary>
    /// The IFC export UI options window.
    /// </summary>
-   public partial class IFCExporterUIWindow : ChildWindow
+   public partial class IFCExporterUIWindow : Window
    {
       // This is intended to be a placeholder for treeView_FilterElement XAML code that isn't ready for release.
       // The code will populate this but the user will have no control.
@@ -704,7 +702,7 @@ namespace BIM.IFC.Export.UI
             using (StreamWriter sw = new StreamWriter(saveFileDialog.FileName))
             {
                JavaScriptSerializer js = new JavaScriptSerializer();
-               sw.Write(SerializerUtils.FormatOutput(js.Serialize(configToSave)));
+               sw.Write(js.Serialize(configToSave));
             }
          }
       }

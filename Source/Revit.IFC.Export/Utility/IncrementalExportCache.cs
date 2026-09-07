@@ -356,18 +356,18 @@ namespace Revit.IFC.Export.Utility
             if (!isSub && string.Equals(contextType, "Model", StringComparison.OrdinalIgnoreCase))
             {
                modelContext = handle;
-               ExporterCacheManager.Set3DContextHandle(exporterIFC, IFCRepresentationIdentifier.None, handle);
+               exporterIFC.Set3DContextHandle(handle, "");
             }
             else if (string.Equals(identifier, "Axis", StringComparison.OrdinalIgnoreCase))
-               ExporterCacheManager.Set3DContextHandle(exporterIFC, IFCRepresentationIdentifier.Axis, handle);
+               exporterIFC.Set3DContextHandle(handle, "Axis");
             else if (string.Equals(identifier, "Body", StringComparison.OrdinalIgnoreCase))
-               ExporterCacheManager.Set3DContextHandle(exporterIFC, IFCRepresentationIdentifier.Body, handle);
+               exporterIFC.Set3DContextHandle(handle, "Body");
             else if (string.Equals(identifier, "Box", StringComparison.OrdinalIgnoreCase))
-               ExporterCacheManager.Set3DContextHandle(exporterIFC, IFCRepresentationIdentifier.Box, handle);
+               exporterIFC.Set3DContextHandle(handle, "Box");
             else if (string.Equals(identifier, "FootPrint", StringComparison.OrdinalIgnoreCase))
-               ExporterCacheManager.Set3DContextHandle(exporterIFC, IFCRepresentationIdentifier.FootPrint, handle);
+               exporterIFC.Set3DContextHandle(handle, "FootPrint");
             else if (string.Equals(identifier, "Annotation", StringComparison.OrdinalIgnoreCase))
-               ExporterCacheManager.Set2DContextHandle(exporterIFC, IFCRepresentationIdentifier.Annotation, handle);
+               exporterIFC.Set2DContextHandle(handle);
          }
 
          return !IFCAnyHandleUtil.IsNullOrHasNoValue(modelContext);

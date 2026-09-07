@@ -12,8 +12,7 @@
                   Width="250"
                   MinHeight="400" 
                   MinWidth="250"
-                  WindowStyle="SingleBorderWindow"
-                  SaveWindowSettings="True" d:DesignWidth="360">
+                  WindowStyle="SingleBorderWindow" d:DesignWidth="360">
 
    <Grid>
       <Grid.RowDefinitions>
