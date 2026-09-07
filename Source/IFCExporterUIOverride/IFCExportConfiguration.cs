@@ -142,16 +142,6 @@ namespace BIM.IFC.Export.UI
       /// If the section box isn't visible, then all the rooms are exported if this option is set.
       /// </remarks>
       public bool ExportRoomsInView { get; set; } = false;
-      /// <summary>
-      /// ezBim: export host grids even when not visible on the filter view.
-      /// </summary>
-      public bool ExportGridsInView { get; set; } = false;
-
-      /// <summary>
-      /// ezBim: keep only grids/levels visible on the export filter view.
-      /// </summary>
-      public bool FilterGridsLevelsByView { get; set; } = false;
-
 
       #endregion     //AdditionalContentTab
 
@@ -824,16 +814,43 @@ namespace BIM.IFC.Export.UI
    {
       public void Upgrade(object destination, PropertyInfo propertyInfo, object value)
       {
-         if (!propertyInfo.CanWrite)
+         if (!propertyInfo.CanWrite || value == null)
             return;
 
-         // convert bool to enum.
+         // convert bool to enum (legacy JSON / ES).
          if (value is bool boolValue)
+         {
             propertyInfo.SetValue(destination, boolValue ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport);
+            return;
+         }
+
          // presented expected type.
-         else if (value is LinkedFileExportAs exportLinkedFiles)
+         if (value is LinkedFileExportAs exportLinkedFiles)
+         {
             propertyInfo.SetValue(destination, exportLinkedFiles);
-         // else don't set value to leave the default value.
+            return;
+         }
+
+         // JavaScriptSerializer emits enums as numbers; strings may appear from hand-edited JSON.
+         if (value is string s)
+         {
+            if (Enum.TryParse(s, true, out LinkedFileExportAs parsed))
+               propertyInfo.SetValue(destination, parsed);
+            else if (bool.TryParse(s, out bool b))
+               propertyInfo.SetValue(destination, b ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport);
+            return;
+         }
+
+         try
+         {
+            int numeric = Convert.ToInt32(value);
+            if (Enum.IsDefined(typeof(LinkedFileExportAs), numeric))
+               propertyInfo.SetValue(destination, (LinkedFileExportAs)numeric);
+         }
+         catch
+         {
+            // leave default
+         }
       }
    }
 }
