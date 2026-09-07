@@ -126,6 +126,7 @@
       <DependentUpon>IFCExport.xaml</DependentUpon>
     </Compile>
     <Compile Include="IFCExportConfiguration.cs" />
+    <Compile Include="IFCLinkedFileExportAs.cs" />
     <Compile Include="IFCExportConfigurationsMap.cs" />
     <Compile Include="IFCExporterUIWindow.xaml.cs">
       <DependentUpon>IFCExporterUIWindow.xaml</DependentUpon>

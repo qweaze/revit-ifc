@@ -224,6 +224,15 @@ namespace BIM.IFC.Export.UI
             }
          }
 
+         if (!comboboxLinkedFiles.HasItems)
+         {
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.DontExport));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportAsSeparate));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameProject));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameSite));
+            comboboxLinkedFiles.Items.Add(new IFCLinkedFileExportAs(LinkedFileExportAs.ExportSameBuilding));
+         }
+
          if (!comboboxActivePhase.HasItems)
          {
             PhaseArray phaseArray = IFCCommandOverrideApplication.TheDocument.Phases;
@@ -369,7 +378,16 @@ namespace BIM.IFC.Export.UI
          checkBoxExportSpecificSchedules.IsChecked = configuration.ExportSpecificSchedules;
          checkboxExportUserDefinedPset.IsChecked = configuration.ExportUserDefinedPsets;
          userDefinedPropertySetFileName.Text = configuration.ExportUserDefinedPsetsFileName;
-         checkBoxExportLinkedFiles.IsChecked = configuration.ExportLinkedFiles != LinkedFileExportAs.DontExport;
+         foreach (IFCLinkedFileExportAs attribute in comboboxLinkedFiles.Items.Cast<IFCLinkedFileExportAs>())
+         {
+            if (configuration.ExportLinkedFiles == attribute.ExportAs)
+            {
+               comboboxLinkedFiles.SelectedItem = attribute;
+               break;
+            }
+         }
+         checkBoxExportGridsInView.IsChecked = configuration.ExportGridsInView;
+         checkBoxFilterGridsLevelsByView.IsChecked = configuration.FilterGridsLevelsByView;
          checkboxIncludeIfcSiteElevation.IsChecked = configuration.IncludeSiteElevation;
          checkboxStoreIFCGUID.IsChecked = configuration.StoreIFCGUID;
          checkBoxExportRoomsInView.IsChecked = configuration.ExportRoomsInView;
@@ -414,7 +432,9 @@ namespace BIM.IFC.Export.UI
                                                                 checkBoxFamilyAndTypeName,
                                                                 checkboxExportBoundingBox,
                                                                 checkboxExportSolidModelRep,
-                                                                checkBoxExportLinkedFiles,
+                                                                comboboxLinkedFiles,
+                                                                checkBoxExportGridsInView,
+                                                                checkBoxFilterGridsLevelsByView,
                                                                 checkboxIncludeIfcSiteElevation,
                                                                 checkboxStoreIFCGUID,
                                                                 checkboxExportMaterialPsets,
@@ -1381,14 +1401,30 @@ namespace BIM.IFC.Export.UI
       /// </summary>
       /// <param name="sender">The source of the event.</param>
       /// <param name="e">Event arguments that contains the event data.</param>
-      private void checkBoxExportLinkedFiles_Checked(object sender, RoutedEventArgs e)
+      private void comboboxLinkedFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
+      {
+         IFCLinkedFileExportAs attributes = comboboxLinkedFiles.SelectedItem as IFCLinkedFileExportAs;
+         IFCExportConfiguration configuration = GetSelectedConfiguration();
+         if (attributes != null && configuration != null)
+         {
+            configuration.ExportLinkedFiles = attributes.ExportAs;
+         }
+      }
+
+      private void checkBoxExportGridsInView_Checked(object sender, RoutedEventArgs e)
       {
          CheckBox checkBox = (CheckBox)sender;
          IFCExportConfiguration configuration = GetSelectedConfiguration();
          if (configuration != null)
-         {
-            configuration.ExportLinkedFiles = GetCheckbuttonChecked(checkBox) ? LinkedFileExportAs.ExportAsSeparate : LinkedFileExportAs.DontExport;
-         }
+            configuration.ExportGridsInView = GetCheckbuttonChecked(checkBox);
+      }
+
+      private void checkBoxFilterGridsLevelsByView_Checked(object sender, RoutedEventArgs e)
+      {
+         CheckBox checkBox = (CheckBox)sender;
+         IFCExportConfiguration configuration = GetSelectedConfiguration();
+         if (configuration != null)
+            configuration.FilterGridsLevelsByView = GetCheckbuttonChecked(checkBox);
       }
 
       /// <summary>

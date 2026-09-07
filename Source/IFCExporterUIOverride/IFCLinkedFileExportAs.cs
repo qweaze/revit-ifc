@@ -1,29 +1,12 @@
 //
-// BIM IFC export alternate UI library: this library works with Autodesk(R) Revit(R) to provide an alternate user interface for the export of IFC files from Revit.
-// Copyright (C) 2016  Autodesk, Inc.
-// 
-// This library is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public
-// License as published by the Free Software Foundation; either
-// version 2.1 of the License, or (at your option) any later version.
+// BIM IFC export alternate UI library.
 //
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public
-// License along with this library; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-//
-using BIM.IFC.Export.UI.Properties;
 using Revit.IFC.Export.Utility;
 
 namespace BIM.IFC.Export.UI
 {
    public class IFCLinkedFileExportAs
    {
-
       public LinkedFileExportAs ExportAs { get; set; }
 
       public IFCLinkedFileExportAs(LinkedFileExportAs exportAs)
@@ -36,17 +19,17 @@ namespace BIM.IFC.Export.UI
          switch (ExportAs)
          {
             case LinkedFileExportAs.DontExport:
-               return Resources.LinkedFilesDontExport;
+               return "Do not export";
             case LinkedFileExportAs.ExportAsSeparate:
-               return Resources.LinkedFilesSeparate;
+               return "Export as separate IFCs";
             case LinkedFileExportAs.ExportSameProject:
-               return Resources.LinkedFilesSameProject;
+               return "Export in the same project";
             case LinkedFileExportAs.ExportSameSite:
-               return Resources.LinkedFilesSameSite;
+               return "Export in the same site";
             case LinkedFileExportAs.ExportSameBuilding:
                return "Export links as the same building";
             default:
-               return Resources.LinkedFilesDontExport;
+               return "Do not export";
          }
       }
    }
