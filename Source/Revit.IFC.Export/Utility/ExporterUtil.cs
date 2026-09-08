@@ -1841,6 +1841,41 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
+      /// True if the element (or its type) has a non-empty IFC export-as override:
+      /// built-in IFC_EXPORT_ELEMENT*_AS and/or legacy shared IFCExportAs / IfcExportAs.
+      /// Used to keep storey containment instead of nesting under IfcSpace (room divert).
+      /// </summary>
+      public static bool HasIfcExportAsOverride(Element element)
+      {
+         if (element == null)
+            return false;
+
+         BuiltInParameter paramId = (element is ElementType) ? BuiltInParameter.IFC_EXPORT_ELEMENT_TYPE_AS :
+            BuiltInParameter.IFC_EXPORT_ELEMENT_AS;
+         Parameter exportElementParameter = element.get_Parameter(paramId);
+         if (!string.IsNullOrWhiteSpace(exportElementParameter?.AsString()))
+            return true;
+
+         if (!(element is ElementType))
+         {
+            Element elementType = element.Document.GetElement(element.GetTypeId());
+            Parameter typeParam = elementType?.get_Parameter(BuiltInParameter.IFC_EXPORT_ELEMENT_TYPE_AS);
+            if (!string.IsNullOrWhiteSpace(typeParam?.AsString()))
+               return true;
+         }
+
+         // Legacy shared parameters still used in many projects alongside built-ins.
+         if (ParameterUtil.GetStringValueFromElementOrSymbol(element, "IFCExportAs", out string sharedExportAs) != null
+            && !string.IsNullOrWhiteSpace(sharedExportAs))
+            return true;
+         if (ParameterUtil.GetStringValueFromElementOrSymbol(element, "IfcExportAs", out sharedExportAs) != null
+            && !string.IsNullOrWhiteSpace(sharedExportAs))
+            return true;
+
+         return false;
+      }
+
+      /// <summary>
       /// Gets the export entity and predefined type information as reported by the
       /// IFC_EXPORT_ELEMENT*_AS parameter.
       /// </summary>

@@ -1350,39 +1350,63 @@ namespace Revit.IFC.Export.Exporter
                         }
                         break;
                      }
-                  case IFCEntityType.IfcTransportElement:
-                     {
-                        IFCAnyHandle localPlacementToUse;
-                        ElementId roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
+                   case IFCEntityType.IfcSpace:
+                      {
+                         // CreateSpace via ExportGenericInstance; it intentionally skips AddElement for IfcSpace.
+                         // Register with AddSpace so RelateLevels emits IfcRelAggregates to the storey
+                         // (IfcSpatialContainer / PlacementSetter level). Do not divert to room containment.
+                         instanceHandle = FamilyExporterUtil.ExportGenericInstance(exportType, exporterIFC, familyInstance,
+                            wrapper, setter, extraParams, instanceGUID, ownerHistory, exportParts ? null : repHnd, overrideLocalPlacement);
 
-                        Enum operationType;
-                        if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
-                        {
-                           // It is PreDefinedType attribute in IFC4
-                           operationType = FamilyExporterUtil.GetPreDefinedType<Toolkit.IFC4.IFCTransportElementType>(familyInstance, familySymbol, exportType.PredefinedType);
-                        }
-                        else
-                        {
-                           operationType = FamilyExporterUtil.GetPreDefinedType<Toolkit.IFCTransportElementType>(familyInstance, familySymbol, exportType.PredefinedType);
-                        }
-                        string operationTypeStr = operationType.ToString();
+                         if (!IFCAnyHandleUtil.IsNullOrHasNoValue(instanceHandle))
+                            wrapper.AddSpace(familyInstance, instanceHandle, setter.LevelInfo, extraParams, true, exportType);
 
-                        double capacityByWeight = 0.0;
-                        ParameterUtil.GetDoubleValueFromElementOrSymbol(familyInstance, "IfcCapacityByWeight", out capacityByWeight);
-                        double capacityByNumber = 0.0;
-                        ParameterUtil.GetDoubleValueFromElementOrSymbol(familyInstance, "IfcCapacityByNumber", out capacityByNumber);
+                         break;
+                      }
+                   case IFCEntityType.IfcTransportElement:
+                      {
+                         // IfcSpatialContainer or IfcExportAs: keep storey (or Site/Building) containment.
+                         bool hasSpatialOverride = (overrideContainerId != ElementId.InvalidElementId)
+                            || !IFCAnyHandleUtil.IsNullOrHasNoValue(overrideContainerHnd);
+                         bool skipRoomDivert = hasSpatialOverride
+                            || ExporterUtil.HasIfcExportAsOverride(familyInstance);
 
-                        instanceHandle = IFCInstanceExporter.CreateTransportElement(exporterIFC, familyInstance, instanceGUID, ownerHistory,
-                           localPlacementToUse, repHnd, operationTypeStr, capacityByWeight, capacityByNumber);
+                         IFCAnyHandle localPlacementToUse;
+                         ElementId roomId = ElementId.InvalidElementId;
+                         if (skipRoomDivert)
+                            localPlacementToUse = !IFCAnyHandleUtil.IsNullOrHasNoValue(overrideLocalPlacement)
+                               ? overrideLocalPlacement : localPlacement;
+                         else
+                            roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
 
-                        bool containedInSpace = (roomId != ElementId.InvalidElementId);
-                        wrapper.AddElement(familyInstance, instanceHandle, setter, extraParams, !containedInSpace, exportType);
-                        if (containedInSpace)
-                           ExporterCacheManager.SpaceInfoCache.RelateToSpace(roomId, instanceHandle);
+                         Enum operationType;
+                         if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+                         {
+                            // It is PreDefinedType attribute in IFC4
+                            operationType = FamilyExporterUtil.GetPreDefinedType<Toolkit.IFC4.IFCTransportElementType>(familyInstance, familySymbol, exportType.PredefinedType);
+                         }
+                         else
+                         {
+                            operationType = FamilyExporterUtil.GetPreDefinedType<Toolkit.IFCTransportElementType>(familyInstance, familySymbol, exportType.PredefinedType);
+                         }
+                         string operationTypeStr = operationType.ToString();
 
-                        break;
-                     }
-                  default:
+                         double capacityByWeight = 0.0;
+                         ParameterUtil.GetDoubleValueFromElementOrSymbol(familyInstance, "IfcCapacityByWeight", out capacityByWeight);
+                         double capacityByNumber = 0.0;
+                         ParameterUtil.GetDoubleValueFromElementOrSymbol(familyInstance, "IfcCapacityByNumber", out capacityByNumber);
+
+                         instanceHandle = IFCInstanceExporter.CreateTransportElement(exporterIFC, familyInstance, instanceGUID, ownerHistory,
+                            localPlacementToUse, repHnd, operationTypeStr, capacityByWeight, capacityByNumber);
+
+                         bool containedInSpace = (roomId != ElementId.InvalidElementId);
+                         wrapper.AddElement(familyInstance, instanceHandle, setter, extraParams, !containedInSpace, exportType);
+                         if (containedInSpace)
+                            ExporterCacheManager.SpaceInfoCache.RelateToSpace(roomId, instanceHandle);
+
+                         break;
+                      }
+                   default:
                      {
                         if (IFCAnyHandleUtil.IsNullOrHasNoValue(instanceHandle))
                         {
@@ -1390,8 +1414,24 @@ namespace Revit.IFC.Export.Exporter
                                  ((exportType.ExportInstance == IFCEntityType.IfcBuildingElementProxy) ||
                                  (exportType.ExportType == IFCEntityType.IfcBuildingElementProxyType));
 
-                           IFCAnyHandle localPlacementToUse = null;
-                           ElementId roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
+                           // Prefer storey/Site/Building over room divert when:
+                           // - IfcSpatialContainer is set, or
+                           // - IfcExportAs / Export to IFC As is set, or
+                           // - entity is IfcBuildingElementProxy (typical Generic Model default mapping).
+                           bool hasSpatialOverride = (overrideContainerId != ElementId.InvalidElementId)
+                              || !IFCAnyHandleUtil.IsNullOrHasNoValue(overrideContainerHnd);
+                           bool skipRoomDivert = hasSpatialOverride
+                              || ExporterUtil.HasIfcExportAsOverride(familyInstance)
+                              || isBuildingElementProxy;
+
+                           IFCAnyHandle localPlacementToUse;
+                           ElementId roomId = ElementId.InvalidElementId;
+                           if (skipRoomDivert)
+                              localPlacementToUse = !IFCAnyHandleUtil.IsNullOrHasNoValue(overrideLocalPlacement)
+                                 ? overrideLocalPlacement : localPlacement;
+                           else
+                              roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
+
                            bool containedInSpace = (roomId != ElementId.InvalidElementId) && (exportType.ExportInstance != IFCEntityType.IfcSystemFurnitureElement);
 
                            if (!isBuildingElementProxy)
