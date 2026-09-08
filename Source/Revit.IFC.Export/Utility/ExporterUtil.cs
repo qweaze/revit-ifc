@@ -1806,6 +1806,26 @@ namespace Revit.IFC.Export.Utility
          return (string.IsNullOrWhiteSpace(enumTypeValue) || (string.Compare(enumTypeValue, "NOTDEFINED", true) == 0));
       }
 
+      /// <summary>
+      /// True if the element (or its type) has a non-empty IFC export-as override
+      /// (legacy shared IFCExportAs / IfcExportAs). Used to keep storey containment
+      /// instead of nesting under IfcSpace (room divert).
+      /// </summary>
+      public static bool HasIfcExportAsOverride(Element element)
+      {
+         if (element == null)
+            return false;
+
+         if (ParameterUtil.GetStringValueFromElementOrSymbol(element, "IFCExportAs", out string sharedExportAs) != null
+            && !string.IsNullOrWhiteSpace(sharedExportAs))
+            return true;
+         if (ParameterUtil.GetStringValueFromElementOrSymbol(element, "IfcExportAs", out sharedExportAs) != null
+            && !string.IsNullOrWhiteSpace(sharedExportAs))
+            return true;
+
+         return false;
+      }
+
       private static IFCExportInfoPair GetExportTypeFromSharedParmaters(Element element, IFCEntityType restrictedGroup)
       {
          const string exportAsEntity = "IFCExportAs";

@@ -243,7 +243,18 @@ namespace Revit.IFC.Export.Exporter
          ElementId roomId = ElementId.InvalidElementId;
          if (IsRoomRelated(type))
          {
-            roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
+            // Prefer storey over Room when IfcSpatialContainer / IfcExportAs is set, or entity is Proxy.
+            IFCAnyHandle spatialOverrideHnd;
+            ElementId spatialOverrideId = ParameterUtil.OverrideContainmentParameter(exporterIFC, familyInstance, out spatialOverrideHnd);
+            bool hasSpatialOverride = (spatialOverrideId != ElementId.InvalidElementId)
+               || !IFCAnyHandleUtil.IsNullOrHasNoValue(spatialOverrideHnd);
+            bool isProxy = type.ExportInstance == IFCEntityType.IfcBuildingElementProxy
+               || type.ExportType == IFCEntityType.IfcBuildingElementProxyType;
+            bool skipRoomDivert = hasSpatialOverride
+               || ExporterUtil.HasIfcExportAsOverride(familyInstance)
+               || isProxy;
+            if (!skipRoomDivert)
+               roomId = setter.UpdateRoomRelativeCoordinates(familyInstance, out localPlacementToUse);
          }
 
          //should remove the create method where there is no use of this handle for API methods
