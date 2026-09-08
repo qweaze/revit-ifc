@@ -176,8 +176,8 @@ namespace Revit.IFC.Export.Exporter
             if (linkInfos != null && linkInfos.Count > 0)
             {
                document.Application.WriteJournalComment(
-                  \"ezBimOne IFC: \" + linkInfos.Count +
-                  \" federated link(s) requested (in-file federated merge not available on IFC_v22 structure)\", true);
+                  "ezBimOne IFC: " + linkInfos.Count +
+                  " federated link(s) requested (in-file federated merge not available on IFC_v22 structure)", true);
             }
 
             EndExport(exporterIFC, document);
