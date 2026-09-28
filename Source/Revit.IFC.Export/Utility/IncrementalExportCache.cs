@@ -115,6 +115,10 @@ namespace Revit.IFC.Export.Utility
             if (!RestoreCaches(exporterIFC, document, currentFile))
                throw new InvalidOperationException("could not restore project/site/building/contexts");
 
+            if (!ValidateReferentialIntegrity(currentFile))
+               throw new InvalidOperationException(
+                  "previous export failed referential integrity check (dangling relationship reference)");
+
             s_previous = sidecar;
             Active = true;
             Journal(document, "ezBimOne IFC incremental: loaded " + s_byGlobalId.Count + " entities from " + readPath);
@@ -301,6 +305,77 @@ namespace Revit.IFC.Export.Utility
          return true;
       }
 
+      /// <summary>
+      /// Cheap circuit breaker: if the previous export already left a dangling relationship
+      /// reference (bug in this or an earlier version of the incremental merge, e.g. a rel type
+      /// not yet covered by <see cref="DeleteProduct"/>), don't build on top of it — fall back to
+      /// a full export instead of compounding the corruption on every subsequent incremental run.
+      /// Covers the same relationship types <see cref="DeleteProduct"/>/<see cref="DetachFromRels"/>
+      /// touch, plus a few more that are cheap to check and known risk points.
+      /// </summary>
+      static bool ValidateReferentialIntegrity(IFCFile file)
+      {
+         (string RelType, string[] SingleAttrs, string[] AggregateAttrs)[] checks =
+         {
+            ("IfcRelVoidsElement", new[] { "RelatingBuildingElement", "RelatedOpeningElement" }, null),
+            ("IfcRelFillsElement", new[] { "RelatingOpeningElement", "RelatedBuildingElement" }, null),
+            ("IfcRelConnectsPathElements", new[] { "RelatingElement", "RelatedElement" }, null),
+            ("IfcRelContainedInSpatialStructure", new[] { "RelatingStructure" }, new[] { "RelatedElements" }),
+            ("IfcRelDefinesByProperties", null, new[] { "RelatedObjects" }),
+            ("IfcRelDefinesByType", null, new[] { "RelatedObjects" }),
+            ("IfcRelAssociatesMaterial", null, new[] { "RelatedObjects" }),
+            ("IfcRelAssignsToGroup", null, new[] { "RelatedObjects" }),
+            ("IfcRelAggregates", null, new[] { "RelatedObjects" }),
+            ("IfcRelSpaceBoundary", new[] { "RelatingSpace" }, null),
+            ("IfcRelCoversBldgElements", new[] { "RelatingBuildingElement" }, new[] { "RelatedCoverings" }),
+            ("IfcRelConnectsPorts", new[] { "RelatingPort", "RelatedPort" }, null),
+            ("IfcRelConnectsPortToElement", new[] { "RelatingPort", "RelatedElement" }, null),
+            ("IfcRelServicesBuildings", new[] { "RelatingSystem" }, new[] { "RelatedBuildings" }),
+            ("IfcRelNests", new[] { "RelatingObject" }, new[] { "RelatedObjects" }),
+         };
+
+         foreach (var check in checks)
+         {
+            IList<IFCAnyHandle> rels = file.GetInstances(check.RelType, false);
+            if (rels == null)
+               continue;
+
+            foreach (IFCAnyHandle rel in rels)
+            {
+               if (IFCAnyHandleUtil.IsNullOrHasNoValue(rel))
+                  continue;
+
+               if (check.SingleAttrs != null)
+               {
+                  foreach (string attr in check.SingleAttrs)
+                  {
+                     IFCAnyHandle value = IFCAnyHandleUtil.GetInstanceAttribute(rel, attr);
+                     if (IFCAnyHandleUtil.IsNullOrHasNoValue(value))
+                        return false;
+                  }
+               }
+
+               if (check.AggregateAttrs != null)
+               {
+                  foreach (string attr in check.AggregateAttrs)
+                  {
+                     ICollection<IFCAnyHandle> values =
+                        IFCAnyHandleUtil.GetAggregateInstanceAttribute<List<IFCAnyHandle>>(rel, attr);
+                     if (values == null)
+                        continue;
+                     foreach (IFCAnyHandle value in values)
+                     {
+                        if (IFCAnyHandleUtil.IsNullOrHasNoValue(value))
+                           return false;
+                     }
+                  }
+               }
+            }
+         }
+
+         return true;
+      }
+
       static bool RestoreUnitsInContext(IFCFile file, IFCAnyHandle project)
       {
          IFCAnyHandle units = IFCAnyHandleUtil.GetInstanceAttribute(project, "UnitsInContext");
@@ -421,6 +496,10 @@ namespace Revit.IFC.Export.Utility
          DetachFromRels(file, "IfcRelAssignsToGroup", "RelatedObjects", product);
          DetachFromRels(file, "IfcRelAggregates", "RelatedObjects", product);
          DeleteRelsWhere(file, "IfcRelVoidsElement", "RelatingBuildingElement", product);
+         DeleteRelsWhere(file, "IfcRelFillsElement", "RelatedBuildingElement", product);
+         DeleteRelsWhere(file, "IfcRelConnectsPathElements", "RelatingElement", product);
+         DeleteRelsWhere(file, "IfcRelConnectsPathElements", "RelatedElement", product);
+         DeleteRelsWhere(file, "IfcRelNests", "RelatingObject", product);
 
          IFCAnyHandleUtil.Delete(product);
          s_byGlobalId.Remove(guid);
